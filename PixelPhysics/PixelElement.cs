@@ -35,38 +35,56 @@ public abstract class PixelElement
         return (origin, origin);
     }
 
-    public virtual PixelElement Clone()
+    public virtual void SetRandomColor()
     {
-        PixelElement clone = this;
-        clone.Color = clone.BaseColor;
+        Color = BaseColor;
         Color addColor = new Color(
             GD.Randf()/4,
             GD.Randf()/4,
             GD.Randf()/4,
             0
         );
-        clone.Color = clone.Color - addColor;
-        if (clone.Color.R < 0) clone.Color.R = 0;
-        if (clone.Color.G < 0) clone.Color.G = 0;
-        if (clone.Color.B < 0) clone.Color.B = 0;
-        if (clone.Color.A != 1) clone.Color.A = 1;
-        return clone; 
+        Color = Color - addColor;
+        if (Color.R < 0) Color.R = 0;
+        if (Color.G < 0) Color.G = 0;
+        if (Color.B < 0) Color.B = 0;
+        if (Color.A != 1) Color.A = 1;
+        
     }
-    
-    public (Vector2I Current, Vector2I Next) FindNextPixelPosition(Vector2I origin, List<Vector2I> coords, PixelChunk chunk, Vector2I direction)
+
+    public virtual PixelElement Clone()
     {
+        PixelElement clone = (PixelElement)MemberwiseClone();
+        return clone;
+    }
+
+    
+    public (Vector2I Current, Vector2I Next) FindNextPixelPosition(Vector2I origin, List<Vector2I> coords, PixelChunk chunk, Vector2I direction, int randomRangeOffset = 10)
+    {
+        // Store the first valid empty position we find
+        Vector2I? firstValidPosition = null;
+
         foreach (Vector2I coord in coords)
         {
-            Vector2I c = origin + coord * direction;
-            if (!chunk.IsInBounds(c.X, c.Y)) continue;
-
-            PixelElement pixel = chunk.pixels[c.X, c.Y];
-            if (!pixel.IsEmpty(this)) return (origin, origin); 
+            Vector2I targetPos = origin + coord * direction;
             
-            return (origin, c);    
+            // Skip if position is out of bounds
+            if (!chunk.IsInBounds(targetPos.X, targetPos.Y)) 
+                continue;
+
+            PixelElement pixel = chunk.pixels[targetPos.X, targetPos.Y];
+            
+            // If position is not empty, continue to next position
+            if (!pixel.IsEmpty(this)) 
+                continue;
+                
+            // Found a valid empty position
+            firstValidPosition = targetPos;
+            break; // Exit loop after finding first valid position
         }
 
-        return (origin, origin);    
+        // Return the first valid position found, or origin if none found
+        return (origin, firstValidPosition ?? origin);
     }
 
 }

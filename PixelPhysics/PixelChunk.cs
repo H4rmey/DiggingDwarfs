@@ -12,7 +12,7 @@ public partial class PixelChunk : Node2D
 {
     [ExportGroup("parameters")]
     [Export]
-    public Vector2I Size = new Vector2I(640, 360);
+    public Vector2I Size = new Vector2I(128, 72);
     
     private Image image;
     private Vector2I mousePos;
@@ -31,8 +31,8 @@ public partial class PixelChunk : Node2D
     private Sprite2D debugSprite;
     private Image debugImage;
     // !!! BRUSH SETTINGS !!!
-    private int brushSize = 8;
-    private int brushColorIndex = 0;
+    private int brushSize = 0;
+    private int brushColorIndex = 1;
     private PixelElement[] brushElements; 
     
     public override void _Ready()
@@ -143,11 +143,11 @@ public partial class PixelChunk : Node2D
         {
             if (Input.IsMouseButtonPressed(MouseButton.WheelDown))
             {
-                brushSize = Math.Clamp(--brushSize, 1, 20);
+                brushSize = Math.Clamp(--brushSize, 0, 32);
             }
             else if (Input.IsMouseButtonPressed(MouseButton.WheelUp))
             {
-                brushSize = Math.Clamp(++brushSize, 1, 20);
+                brushSize = Math.Clamp(++brushSize, 0, 32);
             }
             DrawBrush();
         }
@@ -190,15 +190,15 @@ public partial class PixelChunk : Node2D
         // Parallelize the outer loop
         Parallel.For(0, Size.X, x =>
         {
-            for (int y = 0; y < Size.Y; y++)
+            Parallel.For(0, Size.Y, y =>
             {
                 PixelElement pixelElement = pixels[x, y];
-                if (pixelElement == null) continue;
+                if (pixelElement == null) return;
                 //if (!pixelElement.IsFalling) continue;
                 (Vector2I current, Vector2I next) = pixelElement.GetSwapPosition(new Vector2I(x, y), this);
-                if (current == next) continue;
+                if (current == next) return;
                 Swaps.Add((current, next));
-            }
+            });
         });
 
         // Apply swaps to the image and pixels grid
@@ -291,6 +291,7 @@ public partial class PixelChunk : Node2D
     {
         if (!IsInBounds(x, y)) return;
         
+        pix.SetRandomColor();
         pixels[x, y] = pix;
         image.SetPixel(x,y,pix.Color);
     }
