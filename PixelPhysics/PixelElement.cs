@@ -13,6 +13,7 @@ public abstract class PixelElement
     public float Mass;
     public Vector2I Velocity;
     public float Momentum;
+    public float Friction;
 
     public PixelElement()
     {
@@ -23,6 +24,7 @@ public abstract class PixelElement
         Mass      = 0;
         Velocity  = Vector2I.Zero;
         Momentum  = 0;
+        Friction  = (float)GD.RandRange(0.0f, 1.0f);
     }
     
     public virtual bool IsEmpty(PixelElement element)

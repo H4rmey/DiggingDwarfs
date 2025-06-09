@@ -68,7 +68,11 @@ public partial class PixelChunk : Node2D
         debugImage.Fill(Colors.Transparent);
         AddChild(debugSprite);
         debugSprite.Texture = ImageTexture.CreateFromImage(debugImage);
-        brushElements = new PixelElement[] { new PixelAir(), new PixelSolid() , new PixelLiquid()};
+        brushElements = new PixelElement[] { 
+            new PixelAir(), 
+            new PixelSolid(), 
+            new PixelLiquid(),
+        };
     }
 
 
