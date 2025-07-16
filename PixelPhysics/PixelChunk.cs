@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Godot;
 using Godot.Collections;
+using SharpDiggingDwarfs.Brush;
 
 namespace SharpDiggingDwarfs;
 
@@ -27,13 +28,8 @@ public partial class PixelChunk : Node2D
     //public List<(Vector2I current, Vector2I next)> Swaps;
     private ConcurrentBag<(Vector2I, Vector2I)> Swaps = new ConcurrentBag<(Vector2I, Vector2I)>();
 
-    // !!!DEBUGGING!!!
-    private Sprite2D debugSprite;
-    private Image debugImage;
-    // !!! BRUSH SETTINGS !!!
-    private int brushSize = 0;
-    private int brushColorIndex = 1;
-    private PixelElementComposed[] brushElements;
+    // !!! BRUSH NODE SYSTEM !!!
+    private BrushNode brushNode;
     
     public override void _Ready()
     {
@@ -44,7 +40,7 @@ public partial class PixelChunk : Node2D
         sprite.AddChild(staticBody);
 
         image  = new Image();
-        image  = Image.Create(Size.X, Size.Y, false, Image.Format.Rgba8);
+        image  = Image.CreateEmpty(Size.X, Size.Y, false, Image.Format.Rgba8);
         pixels = new PixelElementComposed[Size.X, Size.Y];
         
         viewPortSize = GetViewport().GetVisibleRect().Size;
@@ -56,42 +52,50 @@ public partial class PixelChunk : Node2D
         InitPixels();
         InitImage();
         
-        // !!!DEBUGGING!!!
-        debugSprite = new Sprite2D();
-        debugImage  = new Image();
-        debugImage  = Image.Create(Size.X, Size.Y, false, Image.Format.Rgba8);
-        debugImage.Fill(Colors.Transparent);
-        AddChild(debugSprite);
-        debugSprite.Texture = ImageTexture.CreateFromImage(debugImage);
-        brushElements = new PixelElementComposed[] {
-            PixelFactory.CreateAir(),
-            PixelFactory.CreateSolid(),
-            PixelFactory.CreateLiquid(),
-        };
+        // Initialize the brush node system
+        SetupBrushNode();
     }
 
 
-    public void DrawBrush()
+    private void SetupBrushNode()
     {
-        // draw rectangle at positions
-        debugImage.Fill(Colors.Transparent);
-        for (int x = -brushSize; x <= brushSize; x++)
+        // Load the brush node scene
+        var brushScene = GD.Load<PackedScene>("res://Brush/BrushNode.tscn");
+        brushNode = brushScene.Instantiate<BrushNode>();
+        
+        // Configure the brush node
+        brushNode.SetChunkSize(Size);
+        
+        // Connect signals
+        brushNode.PaintRequested += OnBrushPaintRequested;
+        brushNode.EraseRequested += OnBrushEraseRequested;
+        brushNode.BrushChanged += OnBrushChanged;
+        
+        // Add as child
+        AddChild(brushNode);
+    }
+    
+    private void OnBrushPaintRequested(Vector2I position, int pixelTypeIndex)
+    {
+        if (IsInBounds(position.X, position.Y))
         {
-            for (int y = -brushSize; y <= brushSize; y++)
-            {
-                if (! (x == -brushSize || y == -brushSize || x == brushSize || y == brushSize) )
-                {
-                    continue;
-                }
-
-                if (!IsInBounds(mousePos.X+x, mousePos.Y+y))
-                {
-                    continue;
-                }
-                debugImage.SetPixel(mousePos.X + x, mousePos.Y + y, brushElements[brushColorIndex].BaseColor);
-            }
+            var pixel = brushNode.GetPixelByIndex(pixelTypeIndex);
+            SetPixel(position.X, position.Y, pixel);
         }
-        debugSprite.Texture = ImageTexture.CreateFromImage(debugImage);
+    }
+    
+    private void OnBrushEraseRequested(Vector2I position)
+    {
+        if (IsInBounds(position.X, position.Y))
+        {
+            SetPixel(position.X, position.Y, PixelFactory.CreateAir());
+        }
+    }
+    
+    private void OnBrushChanged(string brushName, int size, string pixelType)
+    {
+        // Optional: Handle brush change events (e.g., update UI)
+        GD.Print($"Brush changed: {brushName}, Size: {size}, Type: {pixelType}");
     }
 
     public override void _Input(InputEvent @event)
@@ -103,69 +107,20 @@ public partial class PixelChunk : Node2D
             Vector2 rawMouse = (Vector2)eventMouseMotion.Position;
             
             mousePos = new Vector2I((int)(rawMouse.X / scale.X), (int)(rawMouse.Y / scale.Y));
-
-            DrawBrush();
-        }
-        
-        if (Input.IsMouseButtonPressed(MouseButton.Left))
-        {
-            for (int x = -brushSize; x <= brushSize; x++)
-            {
-                for (int y = -brushSize; y <= brushSize; y++)
-                {
-                    if (!IsInBounds(mousePos.X+x, mousePos.Y+y))
-                    {
-                        continue;
-                    }
-                    
-                    SetPixel(mousePos.X + x, mousePos.Y + y, brushElements[brushColorIndex].Clone());
-                }
-            }
-        }
-        else if (Input.IsMouseButtonPressed(MouseButton.Right))
-        {
-            for (int x = -brushSize; x <= brushSize; x++)
-            {
-                for (int y = -brushSize; y <= brushSize; y++)
-                {
-                    if (!IsInBounds(mousePos.X, mousePos.Y))
-                    {
-                        continue;
-                    }
-                    SetPixel(mousePos.X + x, mousePos.Y + y, PixelFactory.CreateAir());
-                }
-            }
-        }
-
-        if (Input.IsKeyPressed(Key.Shift))
-        {
-            if (Input.IsMouseButtonPressed(MouseButton.WheelDown))
-            {
-                brushSize = Math.Clamp(--brushSize, 0, 32);
-            }
-            else if (Input.IsMouseButtonPressed(MouseButton.WheelUp))
-            {
-                brushSize = Math.Clamp(++brushSize, 0, 32);
-            }
-            DrawBrush();
-        }
-        else
-        {
-            if (Input.IsMouseButtonPressed(MouseButton.WheelDown))
-            {
-                brushColorIndex = Math.Clamp(--brushColorIndex, 0, brushElements.Length - 1);
-                DrawBrush();
-            }
-            else if (Input.IsMouseButtonPressed(MouseButton.WheelUp))
-            {
-                brushColorIndex = Math.Clamp(++brushColorIndex, 0, brushElements.Length - 1);
-                DrawBrush();
-            }
         }
 
         if (Input.IsKeyPressed(Key.Enter))
         {
             RefreshFrame();
+        }
+        
+        // Debug: Print brush info when Tab is pressed
+        if (Input.IsActionJustPressed("ui_focus_next")) // Tab key
+        {
+            if (brushNode != null)
+            {
+                GD.Print(brushNode.GetBrushInfo());
+            }
         }
     }
 
