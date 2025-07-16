@@ -23,7 +23,6 @@ public class PixelSolid : PixelElement
 
     public override (Vector2I Current, Vector2I Next) GetSwapPosition(Vector2I origin, PixelChunk chunk)
     {
-        
         // 1. Check if you can place a pixel directly below
         if (chunk.IsInBounds(origin.X, origin.Y + 1))
         {
