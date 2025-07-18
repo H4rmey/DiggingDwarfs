@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://bvqxk8y7n8wqr"]
+
+[ext_resource type="Script" uid="uid://dldfvo2c0bpya" path="res://Source/Core/Input/Brushes/BrushNode.cs" id="1_gigfj"]
+
+[node name="BrushNode" type="Node2D"]
+script = ExtResource("1_gigfj")
