@@ -40,7 +40,7 @@ public class PixelElement
         // Apply random resistance coefficient for backward compatibility
         Statistics = Statistics with
         {
-            ResistanceCoefficient = (float)GD.RandRange(0.0f, 1.0f)
+            Friction = (float)GD.RandRange(0.0f, 1.0f)
         };
     }
     
@@ -92,9 +92,8 @@ public class PixelElement
             var pixel = chunk.pixels[checkPos.X, checkPos.Y];
             if (pixel != null)
             {
-                // For now, only work with composed pixels in the proof-of-concept
-                // We'll handle mixed types later in full implementation
-                continue;
+                // Invoke the action on the found pixel
+                action?.Invoke(pixel, checkPos);
             }
         }
     }

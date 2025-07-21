@@ -83,6 +83,15 @@ public partial class PixelChunk : Node2D
         {
             var pixel = brushNode.GetPixelByIndex(pixelTypeIndex);
             SetPixel(position.X, position.Y, pixel);
+
+            GD.Print(pixelTypeIndex);
+            if (pixelTypeIndex == 0)
+            {
+                pixel.CheckSurroundingPixels(position, this, (adjacentPixel, pos) =>
+                {
+                    adjacentPixel.Statistics = adjacentPixel.Statistics with { CancelHorizontalMotion = false, CancelVerticalMotion = false };
+                });
+            }
         }
     }
     

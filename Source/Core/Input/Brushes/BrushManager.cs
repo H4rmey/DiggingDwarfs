@@ -11,7 +11,7 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
     /// </summary>
     public class BrushManager
     {
-        public const int MIN_BRUSH_SIZE = 1;
+        public const int MIN_BRUSH_SIZE = 0;
         public const int MAX_BRUSH_SIZE = 32;
         
         private List<IBrush> availableBrushes;
