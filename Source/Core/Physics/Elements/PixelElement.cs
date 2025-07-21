@@ -14,43 +14,44 @@ public class PixelElement
 {
     public delegate void PixelAction(PixelElement pixel, Vector2I position);
     
-    // Core properties
-    public bool IsFalling;
-    public PixelState State; 
+    // Core visual properties
+    public PixelType Type;
     public Color BaseColor;
     public Color Color;
-    public float Mass;
-    public Vector2I Velocity;
-    public float Momentum;
-    public float Friction;
-    public bool SuddenStop = false;
-    public Vector2I MomentumDirection = Vector2I.Zero;
 
-    // Behavior components
-    public IMovementBehavior MovementBehavior { get; set; }
-    public IPhysicsBehavior PhysicsBehavior { get; set; }
+    // Composition-based physics system
+    public PhysicsStatistics Statistics { get; set; }
+    public PhysicsEnforcers Enforcers { get; set; }
+
+    // Unified behavior component
+    public IPixelBehaviour Behaviour { get; set; }
     public IVisualBehavior VisualBehavior { get; set; }
 
     public PixelElement()
     {
         BaseColor = Colors.Purple;
         Color     = Colors.Purple;
-        State     = PixelState.Empty; 
-        IsFalling = false;
-        Mass      = 0;
-        Velocity  = Vector2I.Zero;
-        Momentum  = 0;
-        Friction  = (float)GD.RandRange(0.0f, 1.0f);
+        Type      = PixelType.Empty;
+        
+        // Initialize the new physics system with default empty values
+        Statistics = PhysicsStatistics.Empty;
+        Enforcers = PhysicsEnforcers.Empty;
+        
+        // Apply random resistance coefficient for backward compatibility
+        Statistics = Statistics with
+        {
+            ResistanceCoefficient = (float)GD.RandRange(0.0f, 1.0f)
+        };
     }
     
     public virtual bool IsEmpty(PixelElement element)
     {
-        return element.Mass > Mass;
+        return element.Statistics.Mass > Statistics.Mass;
     }
     
     public virtual (Vector2I Current, Vector2I Next) GetSwapPosition(Vector2I origin, PixelChunk chunk)
     {
-        return MovementBehavior?.GetSwapPosition(origin, chunk, this) ?? (origin, origin);
+        return Behaviour?.GetSwapPosition(origin, chunk, this) ?? (origin, origin);
     }
 
     public virtual void SetRandomColor()
@@ -62,18 +63,6 @@ public class PixelElement
     {
         PixelElement clone = (PixelElement)MemberwiseClone();
         return clone;
-    }
-
-    public virtual bool SetSuddenStop()
-    {
-        if (GD.RandRange(0.0f, 1.0f) < Friction)
-        {
-            SuddenStop = true;
-            Momentum = 0.0f;
-            MomentumDirection = Vector2I.Zero;
-            return true;
-        }
-        return false;
     }
 
     public virtual void CheckSurroundingPixels(Vector2I origin, PixelChunk chunk, PixelAction action)
@@ -118,30 +107,25 @@ public class PixelElement
         foreach (Vector2I coord in coords)
         {
             Vector2I targetPos = origin + coord * direction;
-            
+
             // Skip if position is out of bounds
-            if (!chunk.IsInBounds(targetPos.X, targetPos.Y)) 
+            if (!chunk.IsInBounds(targetPos.X, targetPos.Y))
                 continue;
 
             var pixel = chunk.pixels[targetPos.X, targetPos.Y];
+
+            // exit on the first empty pixel that we find
+
+            if (pixel.IsEmpty(this))
+            {
+                firstValidPosition = targetPos;
+                break;
+            }
+            else if (pixel.Type != PixelType.Liquid )
+            {
+                break;
+            }
             
-            // For proof-of-concept, use the existing PixelElement IsEmpty method
-            // We'll handle the composition transition properly in the full implementation
-            if (pixel is PixelElement composedPixel)
-            {
-                bool isEmpty = composedPixel.IsEmpty(this);
-                if (!isEmpty)
-                    continue;
-            }
-            else
-            {
-                // Skip unknown pixel types
-                continue;
-            }
-                
-            // Found a valid empty position
-            firstValidPosition = targetPos;
-            break; // Exit loop after finding first valid position
         }
 
         // Return the first valid position found, or origin if none found

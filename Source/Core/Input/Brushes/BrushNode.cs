@@ -24,7 +24,7 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
         [ExportGroup("Brush Settings")]
         [Export] public bool EnableInput { get; set; } = true;
         [Export] public bool ShowPreview { get; set; } = true;
-        [Export] public int InitialSize { get; set; } = 1;
+        [Export] public int InitialSize { get; set; } = 0;
         [Export] public int InitialBrushIndex { get; set; } = 0;
         [Export] public int InitialPixelTypeIndex { get; set; } = 1;
         
@@ -258,11 +258,11 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
         private int GetCurrentPixelTypeIndex()
         {
             var currentPixel = brushManager.CurrentPixelType;
-            return currentPixel.State switch
+            return currentPixel.Type switch
             {
-                PixelState.Empty => 0,
-                PixelState.Solid => 1,
-                PixelState.Liquid => 2,
+                PixelType.Empty => 0,
+                PixelType.Solid => 1,
+                PixelType.Liquid => 2,
                 _ => 0
             };
         }

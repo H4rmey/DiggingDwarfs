@@ -1,6 +1,6 @@
 ﻿namespace SharpDiggingDwarfs.Core.Physics.Elements;
 
-public enum PixelState
+public enum PixelType
 {
     Empty,
     Solid,

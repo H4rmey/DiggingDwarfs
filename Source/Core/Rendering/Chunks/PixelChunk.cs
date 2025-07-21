@@ -317,8 +317,8 @@ public partial class PixelChunk : Node2D
         var composedAir = PixelFactory.CreateAir();
         
         // Test that composed pixels have the expected properties
-        GD.Print($"Composed solid - State: {composedSolid.State}, Mass: {composedSolid.Mass}");
-        GD.Print($"Composed air - State: {composedAir.State}, Mass: {composedAir.Mass}");
+        GD.Print($"Composed solid - Type: {composedSolid.Type}, Mass: {composedSolid.Statistics.Mass}");
+        GD.Print($"Composed air - Type: {composedAir.Type}, Mass: {composedAir.Statistics.Mass}");
         
         // Test IsEmpty logic between composed pixels
         bool airEmptyForSolid = composedAir.IsEmpty(composedSolid);
@@ -328,8 +328,8 @@ public partial class PixelChunk : Node2D
         GD.Print($"Solid empty for air: {solidEmptyForAir} (should be false)");
         
         // Test behavior assignment
-        bool solidHasBehavior = composedSolid.MovementBehavior != null;
-        bool airHasBehavior = composedAir.MovementBehavior != null;
+        bool solidHasBehavior = composedSolid.Behaviour != null;
+        bool airHasBehavior = composedAir.Behaviour != null;
         
         GD.Print($"Solid has movement behavior: {solidHasBehavior} (should be true)");
         GD.Print($"Air has movement behavior: {airHasBehavior} (should be false)");

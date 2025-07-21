@@ -1,7 +1,6 @@
 using Godot;
 using SharpDiggingDwarfs.Core.Physics.Behaviors.Interfaces;
-using SharpDiggingDwarfs.Core.Physics.Behaviors.Physics;
-using SharpDiggingDwarfs.Core.Physics.Behaviors.Movement;
+using SharpDiggingDwarfs.Core.Physics.Behaviors;
 using SharpDiggingDwarfs.Core.Physics.Behaviors.Visual;
 using SharpDiggingDwarfs.Core.Physics.Elements;
 
@@ -9,7 +8,7 @@ namespace SharpDiggingDwarfs.Core.Physics.Factory;
 
 /// <summary>
 /// Factory for creating different types of composed pixels with appropriate behaviors
-/// This demonstrates the composition pattern in action
+/// This demonstrates the new unified behavior pattern in action
 /// </summary>
 public static class PixelFactory
 {
@@ -20,15 +19,16 @@ public static class PixelFactory
     {
         var pixel = new PixelElement
         {
-            State = PixelState.Empty,
-            IsFalling = false,
-            MovementBehavior = new StaticMovementBehavior(),
-            PhysicsBehavior = new EmptyPhysicsBehavior(),
+            Type = PixelType.Empty,
+            Behaviour = new EmptyBehaviour(),
             VisualBehavior = new AirVisualBehavior()
         };
         
-        // Initialize physics and visual properties
-        pixel.PhysicsBehavior.UpdatePhysics(pixel);
+        // Initialize physics using the unified behavior
+        pixel.Behaviour.InitializePhysics(pixel);
+        pixel.Behaviour.UpdatePhysics(pixel);
+        
+        // Initialize visual properties
         pixel.BaseColor = pixel.VisualBehavior.GetBaseColor();
         pixel.VisualBehavior.SetRandomColor(pixel);
         
@@ -42,17 +42,16 @@ public static class PixelFactory
     {
         var pixel = new PixelElement
         {
-            State = PixelState.Solid,
-            IsFalling = true,
-            Velocity = Vector2I.Zero,
-            Momentum = 0,
-            MovementBehavior = new FallingMovementBehavior(),
-            PhysicsBehavior = new GranularPhysicsBehavior(),
+            Type = PixelType.Solid,
+            Behaviour = new SolidBehaviour(),
             VisualBehavior = new SolidVisualBehavior()
         };
         
-        // Initialize physics and visual properties
-        pixel.PhysicsBehavior.UpdatePhysics(pixel);
+        // Initialize physics using the unified behavior
+        pixel.Behaviour.InitializePhysics(pixel);
+        pixel.Behaviour.UpdatePhysics(pixel);
+        
+        // Initialize visual properties
         pixel.BaseColor = pixel.VisualBehavior.GetBaseColor();
         pixel.VisualBehavior.SetRandomColor(pixel);
         
@@ -60,28 +59,48 @@ public static class PixelFactory
     }
 
     /// <summary>
-    /// Creates a liquid pixel (placeholder for future implementation)
+    /// Creates a liquid pixel with flow behavior
     /// </summary>
     public static PixelElement CreateLiquid()
     {
         var pixel = new PixelElement
         {
-            State = PixelState.Liquid,
-            IsFalling = true,
-            Velocity = Vector2I.Zero,
-            Momentum = 0,
-            MovementBehavior = new LiquidFlowBehavior(),
-            PhysicsBehavior = new FluidPhysicsBehavior(),
+            Type = PixelType.Liquid,
+            Behaviour = new LiquidBehaviour(),
             VisualBehavior = new LiquidVisualBehavior()
         };
         
-        // Initialize physics and visual properties
-        pixel.PhysicsBehavior.UpdatePhysics(pixel);
+        // Initialize physics using the unified behavior
+        pixel.Behaviour.InitializePhysics(pixel);
+        pixel.Behaviour.UpdatePhysics(pixel);
+        
+        // Initialize visual properties
         pixel.BaseColor = pixel.VisualBehavior.GetBaseColor();
         pixel.VisualBehavior.SetRandomColor(pixel);
         
         return pixel;
     }
 
-    // Old conversion method removed - no longer needed since old classes are deleted
+    /// <summary>
+    /// Creates a structure pixel that acts as an immovable barrier
+    /// </summary>
+    public static PixelElement CreateStructure()
+    {
+        var pixel = new PixelElement
+        {
+            Type = PixelType.Solid, // Structures use solid state but with different behavior
+            Behaviour = new StructureBehaviour(),
+            VisualBehavior = new SolidVisualBehavior() // Reuse solid visual for now
+        };
+        
+        // Initialize physics using the unified behavior
+        pixel.Behaviour.InitializePhysics(pixel);
+        pixel.Behaviour.UpdatePhysics(pixel);
+        
+        // Initialize visual properties
+        pixel.BaseColor = pixel.VisualBehavior.GetBaseColor();
+        pixel.VisualBehavior.SetRandomColor(pixel);
+        
+        return pixel;
+    }
 }

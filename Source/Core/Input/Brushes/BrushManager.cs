@@ -134,12 +134,12 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
         /// </summary>
         private string GetPixelTypeName(PixelElement pixel)
         {
-            return pixel.State switch
+            return pixel.Type switch
             {
-                PixelState.Empty => "Air",
-                PixelState.Solid => "Solid",
-                PixelState.Liquid => "Liquid",
-                PixelState.Gas => "Gas",
+                PixelType.Empty => "Air",
+                PixelType.Solid => "Solid",
+                PixelType.Liquid => "Liquid",
+                PixelType.Gas => "Gas",
                 _ => "Unknown"
             };
         }
