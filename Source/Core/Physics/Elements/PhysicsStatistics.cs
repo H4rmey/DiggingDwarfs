@@ -18,14 +18,31 @@ public struct PhysicsStatistics
     public float Density { get; set; }
     
     /// <summary>
-    /// Resistance coefficient - affects how easily the pixel stops moving
+    /// Resistance coefficient - affects how easily the pixel stops move (see CancelHorizontalMovement)
     /// </summary>
-    public float Friction { get; set; }
+    public float HorizontalFriction { get; set; }
+
+    /// <summary>
+    /// Resistance coefficient - affects how easily the pixel stops move (see CancelVerticalMovement)
+    /// </summary>
+    public float VerticalFriction { get; set; }
     
     /// <summary>
-    /// Flow resistance for liquid-like behavior - higher values mean less fluid movement
+    /// Whether the pixel will resolve horizontal motion or not
     /// </summary>
-    public float FlowResistance { get; set; }
+    public bool CancelHorizontalMotion { get; set; }
+
+    /// <summary>
+    /// Whether the pixel will resolve vertical motion or not
+    /// </summary>
+    public bool CancelVerticalMotion { get; set; }
+    
+    /// <summary>
+    /// Flow resistance for liquid-like behavior - higher values mean more fluid movement
+    /// 
+    /// Will determine how many pixels are checked for a new position
+    /// </summary>
+    public int Viscosity { get; set; }
     
     /// <summary>
     /// Momentum accumulation rate - how quickly momentum builds up when falling
@@ -38,25 +55,33 @@ public struct PhysicsStatistics
     public float HaltThreshold { get; set; }
     
     // Physics state properties
+    private bool _isFalling;
+    
     /// <summary>
-    /// Whether the pixel is currently falling due to gravity
+    /// Whether the pixel is currently falling due to gravity.
+    /// When set to true, automatically sets CancelVerticalMotion to true as well
+    /// to ensure proper falling behavior.
+    /// 
+    /// IsFalling is primarily used to obtain wether or not the pixel is falling. 
+    /// To actually cancel the falling set CancelVeticalMotion
     /// </summary>
-    public bool IsFalling { get; set ; }
+    public bool IsFalling
+    {
+        get => _isFalling;
+        set
+        {
+            _isFalling = value;
+            if (value)
+            {
+                CancelVerticalMotion = false;
+            }
+        }
+    }
     
     /// <summary>
     /// Current velocity vector of the pixel
     /// </summary>
     public Vector2I Velocity { get; set; }
-    
-    /// <summary>
-    /// Whether the pixel will resolve horizontal motion or not
-    /// </summary>
-    public bool CancelHorizontalMotion { get; set; }
-
-    /// <summary>
-    /// Whether the pixel will resolve vertical motion or not
-    /// </summary>
-    public bool CancelVerticalMotion { get; set; }
     
     /// <summary>
     /// Current momentum value of the pixel
@@ -75,8 +100,9 @@ public struct PhysicsStatistics
     {
         Mass = 0f,
         Density = 0f,
-        Friction = 0f,
-        FlowResistance = 0f,
+        HorizontalFriction = 0f,
+        VerticalFriction = 0f,
+        Viscosity = 0,
         MomentumRate = 0f,
         HaltThreshold = 0f,
         IsFalling = false,
@@ -94,8 +120,9 @@ public struct PhysicsStatistics
     {
         Mass = 0.2f,
         Density = 1.0f,
-        Friction = 0.1f,
-        FlowResistance = 8.0f,
+        HorizontalFriction = 0.1f,
+        VerticalFriction = 0.1f,
+        Viscosity = 8,
         MomentumRate = 0.5f,
         HaltThreshold = 0.05f,
         IsFalling = false,
@@ -113,8 +140,9 @@ public struct PhysicsStatistics
     {
         Mass = 0.33f,
         Density = 2.0f,
-        Friction = 0.5f,
-        FlowResistance = 0f,
+        HorizontalFriction = 0.5f,
+        VerticalFriction = 0.5f,
+        Viscosity = 0,
         MomentumRate = 1.0f,
         HaltThreshold = 0.5f,
         IsFalling = false,
@@ -132,8 +160,9 @@ public struct PhysicsStatistics
     {
         Mass = 10.0f,
         Density = 5.0f,
-        Friction = 1.0f,
-        FlowResistance = 0f,
+        HorizontalFriction = 1.0f,
+        VerticalFriction = 1.0f,
+        Viscosity = 0,
         MomentumRate = 0f,
         HaltThreshold = 1.0f,
         IsFalling = false,

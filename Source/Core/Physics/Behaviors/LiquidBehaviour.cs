@@ -32,48 +32,74 @@ public class LiquidBehaviour : IPixelBehaviour
         return !pixel.Statistics.CancelHorizontalMotion && pixel.Statistics.Mass > 0;
     }
 
+    /// <summary>
+    /// Determines the next position for a liquid pixel based on physics rules and the pixel's statistics.
+    /// Returns a tuple containing the current position and the next position.
+    /// </summary>
+    /// <param name="origin">The current position of the pixel</param>
+    /// <param name="chunk">The pixel chunk containing the pixel</param>
+    /// <param name="pixel">The pixel element being processed</param>
+    /// <returns>A tuple with (Current position, Next position)</returns>
     public (Vector2I Current, Vector2I Next) GetSwapPosition(Vector2I origin, PixelChunk chunk, PixelElement pixel)
     {
+        // If a pixel is falling, ensure vertical motion is allowed
+        // This is the complement to the IsFalling/CancelHorizontalMotion relationship:
+        // - IsFalling=true requires CancelHorizontalMotion=true (enforced in PhysicsStatistics)
+        // - IsFalling=true requires CancelVerticalMotion=false (enforced here)
+        if (pixel.Statistics.IsFalling) pixel.Statistics = pixel.Statistics with { CancelVerticalMotion = false };
+
+        // If vertical motion is canceled, the pixel stays in place
+        if (pixel.Statistics.CancelVerticalMotion) return (origin, origin);
+
         int x = origin.X;
         int y = origin.Y;
 
-        // First check the pixel below 
+        // First check the pixel below (primary gravity-based movement)
         if (chunk.IsInBounds(origin.X, origin.Y + 1))
         {
             var belowPixel = chunk.pixels[origin.X, origin.Y + 1];
             if (belowPixel.IsEmpty(pixel))
             {
+                // Calculate momentum as the pixel falls downward
                 pixel.Enforcers.ApplyMomentum(pixel);
-                return (origin, new Vector2I(origin.X, origin.Y + 1));    
+                return (origin, new Vector2I(origin.X, origin.Y + 1));
             }
         }
 
-        // Apply flow behavior using enforcers
+        if (pixel.Statistics.CancelVerticalMotion) return (origin, origin);
+
+        // If can't move directly down, calculate how the liquid should flow laterally
+        // Apply flow physics to the liquid (handles spread patterns and momentum)
         pixel.Enforcers.ApplyFlow(pixel, origin, chunk);
 
-        // Check for sudden stop using enforcers
+        // Check if the pixel should stop moving (based on physics thresholds like friction)
+        // This simulates how real liquids can stop flowing in certain conditions
         if (pixel.Enforcers.EnforceStop(pixel))
         {
             return (origin, origin);
         }
 
-        // If you cannot go below, flow to the sides based on flow resistance
+        // Generate a list of possible horizontal offsets based on flow resistance
         List<Vector2I> coords = new List<Vector2I>();
-        int flowRange = (int)pixel.Statistics.FlowResistance;
-        for (int i = 1; i < flowRange; i++)
+        for (int i = 1; i < pixel.Statistics.Viscosity; i++)
         {
-            coords.Add(new Vector2I(i, 0));
+            coords.Add(new Vector2I(i, 0)); // Horizontal offsets (will be multiplied by direction)
         }
 
+        // Randomly decide whether to check left or right first for more natural liquid behavior
+        // This prevents all liquid from always flowing in the same direction
         bool doLeftFirst = GD.RandRange(0, 1) == 0;
         Vector2I direction = doLeftFirst ? Vector2I.Left : Vector2I.Right;
         
+        // Try to find a valid position in the first chosen direction
         var (Current, Next) = pixel.FindNextPixelPosition(origin, coords, chunk, direction);
-        if (Current != Next) return (Current, Next);
+        if (Current != Next) return (Current, Next); // Return immediately if a valid move is found
         
+        // If first direction fails, try the opposite direction
         direction = !doLeftFirst ? Vector2I.Left : Vector2I.Right;
         (Current, Next) = pixel.FindNextPixelPosition(origin, coords, chunk, direction);
         
+        // Return final result - if no movement is possible, Current and Next will be the same
         return (Current, Next);
     }
 }

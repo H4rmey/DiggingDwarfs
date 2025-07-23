@@ -17,7 +17,7 @@ public struct PhysicsEnforcers
     {
         if (pixel.Statistics.HaltThreshold <= 0) return false;
         
-        return GD.RandRange(0.0f, 1.0f) < pixel.Statistics.Friction * pixel.Statistics.HaltThreshold;
+        return GD.RandRange(0.0f, 1.0f) < pixel.Statistics.HorizontalFriction * pixel.Statistics.HaltThreshold;
     }
     
     /// <summary>
@@ -75,11 +75,11 @@ public struct PhysicsEnforcers
     /// <param name="chunk">The chunk containing the pixel</param>
     public void ApplyFlow(PixelElement pixel, Vector2I origin, PixelChunk chunk)
     {
-        if (pixel.Statistics.FlowResistance > 0)
+        if (pixel.Statistics.Viscosity > 0)
         {
             // Trigger surrounding pixels to potentially start flowing
             pixel.CheckSurroundingPixels(origin, chunk, (adjacentPixel, pos) => {
-                if (GD.RandRange(0.0f, 1.0f) < pixel.Statistics.Friction)
+                if (GD.RandRange(0.0f, 1.0f) < pixel.Statistics.HorizontalFriction)
                 {
                     adjacentPixel.Statistics = adjacentPixel.Statistics with { CancelHorizontalMotion = false };
                 }

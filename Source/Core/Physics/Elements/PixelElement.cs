@@ -38,9 +38,11 @@ public class PixelElement
         Enforcers = PhysicsEnforcers.Empty;
         
         // Apply random resistance coefficient for backward compatibility
+        float randomFriction = (float)GD.RandRange(0.0f, 1.0f);
         Statistics = Statistics with
         {
-            Friction = (float)GD.RandRange(0.0f, 1.0f)
+            HorizontalFriction = randomFriction,
+            VerticalFriction = randomFriction
         };
     }
     

@@ -57,7 +57,7 @@ public class SolidBehaviour : IPixelBehaviour
                 // Use CheckSurroundingPixels to handle adjacent pixels
                 pixel.CheckSurroundingPixels(origin, chunk, (adjacentPixel, pos) =>
                 {
-                    if (GD.RandRange(0.0f, 1.0f) < pixel.Statistics.Friction)
+                    if (GD.RandRange(0.0f, 1.0f) < pixel.Statistics.HorizontalFriction)
                     {
                         adjacentPixel.Statistics = adjacentPixel.Statistics with { CancelHorizontalMotion = false, CancelVerticalMotion = false };
                     }
