@@ -15,29 +15,28 @@ public class SolidBehaviour : IPixelBehaviour
 {
     public void InitializePhysics(PixelElement pixel)
     {
-        pixel.Statistics = PhysicsStatistics.Solid;
-        pixel.Enforcers = PhysicsEnforcers.Solid;
+        pixel.Physics = PhysicsHelper.Solid;
     }
 
     public void UpdatePhysics(PixelElement pixel)
     {
-        // Apply enforcers
-        pixel.Enforcers.ApplyGravity(pixel);
-        pixel.Enforcers.ApplyMomentum(pixel);
+        // Apply physics
+        pixel.Physics.ApplyGravity(pixel);
+        pixel.Physics.ApplyMomentum(pixel);
     }
 
     public bool ShouldFall(PixelElement pixel)
     {
-        // Solids fall unless they've been stopped by enforcers
-        return !pixel.Statistics.CancelHorizontalMotion && pixel.Statistics.Mass > 0;
+        // Solids fall unless they've been stopped by physics
+        return !pixel.Physics.CancelHorizontalMotion && pixel.Physics.Mass > 0;
     }
 
     public (Vector2I Current, Vector2I Next) GetSwapPosition(Vector2I origin, PixelChunk chunk, PixelElement pixel)
     {
         // if a pixel is falling, make sure the vertical motion is allowed.
-        if (pixel.Statistics.IsFalling) pixel.Statistics = pixel.Statistics with { CancelVerticalMotion = false };
+        if (pixel.Physics.IsFalling) pixel.Physics = pixel.Physics with { CancelVerticalMotion = false };
 
-        if (pixel.Statistics.CancelVerticalMotion) return (origin, origin);
+        if (pixel.Physics.CancelVerticalMotion) return (origin, origin);
 
         // 1. Check if you can place a pixel directly below
         if (chunk.IsInBounds(origin.X, origin.Y + 1))
@@ -46,20 +45,23 @@ public class SolidBehaviour : IPixelBehaviour
             if (belowPixel.IsEmpty(pixel))
             {
 
-                pixel.Statistics = pixel.Statistics with { IsFalling = true, CancelVerticalMotion = false };
-                pixel.Enforcers.ApplyMomentum(pixel);
+                pixel.Physics = pixel.Physics with { IsFalling = true, CancelVerticalMotion = false };
+                pixel.Physics.ApplyMomentum(pixel);
 
                 // The pixel below the current pixel should be falling, as it carries momentum so that momentum is transfered to the pixel below it.
                 // TODO: make it so the IsFalling is only set based on a calculation with mass, momentum and friction.
-                chunk.pixels[origin.X, origin.Y + 1].Statistics = chunk.pixels[origin.X, origin.Y + 1].Statistics with { IsFalling = true, CancelVerticalMotion = false };
+                chunk.pixels[origin.X, origin.Y + 1].Physics = chunk.pixels[origin.X, origin.Y + 1].Physics with { IsFalling = true, CancelVerticalMotion = false };
 
 
                 // Use CheckSurroundingPixels to handle adjacent pixels
+                // Copy the horizontalFriction value to use in the lambda to avoid 'this' capture issues
+                float horizontalFriction = pixel.Physics.HorizontalFriction;
+                
                 pixel.CheckSurroundingPixels(origin, chunk, (adjacentPixel, pos) =>
                 {
-                    if (GD.RandRange(0.0f, 1.0f) < pixel.Statistics.HorizontalFriction)
+                    if (GD.RandRange(0.0f, 1.0f) < horizontalFriction)
                     {
-                        adjacentPixel.Statistics = adjacentPixel.Statistics with { CancelHorizontalMotion = false, CancelVerticalMotion = false };
+                        adjacentPixel.Physics = adjacentPixel.Physics with { CancelHorizontalMotion = false, CancelVerticalMotion = false };
                     }
                 });
 
@@ -70,8 +72,8 @@ public class SolidBehaviour : IPixelBehaviour
         // 1.1 Handle sudden stop using enforcers
         // suddenstop is used to restrict sideways momentum
         // TODO: rename suddenstop to CancelHorizontalMomentum and add a CancelVerticalMomentum boolean (which is currently unused)
-        if (pixel.Statistics.CancelHorizontalMotion) return (origin, origin);
-        if (pixel.Enforcers.EnforceStop(pixel)) return (origin, origin);
+        if (pixel.Physics.CancelHorizontalMotion) return (origin, origin);
+        if (pixel.Physics.EnforceStop(pixel)) return (origin, origin);
         
         // 2. If there is no place directly below -> check the belowLeft and belowRight side in a random order
         var diagonalPositions = new List<Vector2I>
@@ -93,8 +95,8 @@ public class SolidBehaviour : IPixelBehaviour
             {
                 // The pixel below the current pixel should be falling, as it carries momentum so that momentum is transfered to the pixel below it.
                 // TODO: make it so the IsFalling is only set based on a calculation with mass, momentum and friction.
-                pixel.Statistics = pixel.Statistics with { IsFalling = true, CancelVerticalMotion = false };
-                pixel.Enforcers.ApplyMomentum(pixel);
+                pixel.Physics = pixel.Physics with { IsFalling = true, CancelVerticalMotion = false };
+                pixel.Physics.ApplyMomentum(pixel);
                 return (origin, origin + firstDirection);
             }
         }
@@ -107,36 +109,36 @@ public class SolidBehaviour : IPixelBehaviour
             {
                 // The pixel below the current pixel should be falling, as it carries momentum so that momentum is transfered to the pixel below it.
                 // TODO: make it so the IsFalling is only set based on a calculation with mass, momentum and friction.
-                pixel.Statistics = pixel.Statistics with { IsFalling = true, CancelVerticalMotion = false };
-                pixel.Enforcers.ApplyMomentum(pixel);
+                pixel.Physics = pixel.Physics with { IsFalling = true, CancelVerticalMotion = false };
+                pixel.Physics.ApplyMomentum(pixel);
                 
                 return (origin, origin + secondDirection);
             }
         }
         
         // 3. If belowLeft, belowRight and below are all blocked, resolve the momentum
-        if (!pixel.Statistics.IsFalling && pixel.Statistics.Momentum > 0)
+        if (!pixel.Physics.IsFalling && pixel.Physics.Momentum > 0)
         {
             // If we haven't set a momentum direction yet (just landed), set it based on last diagonal movement
-            if (pixel.Statistics.MomentumDirection == Vector2I.Zero)
+            if (pixel.Physics.MomentumDirection == Vector2I.Zero)
             {
                 // Use the X component of the last diagonal movement to determine direction
                 Vector2I newDirection = firstDirection.X > 0 ? Vector2I.Right : Vector2I.Left;
-                pixel.Statistics = pixel.Statistics with { MomentumDirection = newDirection };
+                pixel.Physics = pixel.Physics with { MomentumDirection = newDirection };
             }
 
             // Move in the stored momentum direction
-            Vector2I targetPos = origin + pixel.Statistics.MomentumDirection;
+            Vector2I targetPos = origin + pixel.Physics.MomentumDirection;
             
             if (chunk.IsInBounds(targetPos.X, targetPos.Y))
             {
                 var targetPixel = chunk.pixels[targetPos.X, targetPos.Y];
                 if (targetPixel.IsEmpty(pixel))
                 {
-                    float newMomentum = pixel.Statistics.Momentum - 1;
+                    float newMomentum = pixel.Physics.Momentum - 1;
                     if (newMomentum <= 0)
                     {
-                        pixel.Statistics = pixel.Statistics with
+                        pixel.Physics = pixel.Physics with
                         {
                             Momentum = 0,
                             MomentumDirection = Vector2I.Zero
@@ -144,16 +146,16 @@ public class SolidBehaviour : IPixelBehaviour
                     }
                     else
                     {
-                        pixel.Statistics = pixel.Statistics with { Momentum = newMomentum };
+                        pixel.Physics = pixel.Physics with { Momentum = newMomentum };
                     }
                     return (origin, targetPos);
                 }
             }
         }
-        else if (pixel.Statistics.IsFalling)
+        else if (pixel.Physics.IsFalling)
         {
             // We were falling but couldn't move, so we've landed
-            pixel.Statistics = pixel.Statistics with { IsFalling = true, CancelVerticalMotion = false };
+            pixel.Physics = pixel.Physics with { IsFalling = true, CancelVerticalMotion = false };
             // Don't reset momentum here, it's already accumulated during falling
         }
         

@@ -13,14 +13,13 @@ public class StructureBehaviour : IPixelBehaviour
 {
     public void InitializePhysics(PixelElement pixel)
     {
-        pixel.Statistics = PhysicsStatistics.Structure;
-        pixel.Enforcers = PhysicsEnforcers.Structure;
+        pixel.Physics = PhysicsHelper.Structure;
     }
 
     public void UpdatePhysics(PixelElement pixel)
     {
         // Structures are always static - force stop all movement
-        pixel.Statistics = pixel.Statistics with
+        pixel.Physics = pixel.Physics with
         {
             IsFalling = false,
             Momentum = 0,

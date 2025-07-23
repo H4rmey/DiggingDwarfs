@@ -15,21 +15,20 @@ public class LiquidBehaviour : IPixelBehaviour
 {
     public void InitializePhysics(PixelElement pixel)
     {
-        pixel.Statistics = PhysicsStatistics.Liquid;
-        pixel.Enforcers = PhysicsEnforcers.Liquid;
+        pixel.Physics = PhysicsHelper.Liquid;
     }
 
     public void UpdatePhysics(PixelElement pixel)
     {
-        // Apply enforcers
-        pixel.Enforcers.ApplyGravity(pixel);
-        pixel.Enforcers.ApplyMomentum(pixel);
+        // Apply physics
+        pixel.Physics.ApplyGravity(pixel);
+        pixel.Physics.ApplyMomentum(pixel);
     }
 
     public bool ShouldFall(PixelElement pixel)
     {
-        // Liquids fall unless they've been stopped by enforcers
-        return !pixel.Statistics.CancelHorizontalMotion && pixel.Statistics.Mass > 0;
+        // Liquids fall unless they've been stopped by physics
+        return !pixel.Physics.CancelHorizontalMotion && pixel.Physics.Mass > 0;
     }
 
     /// <summary>
@@ -44,12 +43,12 @@ public class LiquidBehaviour : IPixelBehaviour
     {
         // If a pixel is falling, ensure vertical motion is allowed
         // This is the complement to the IsFalling/CancelHorizontalMotion relationship:
-        // - IsFalling=true requires CancelHorizontalMotion=true (enforced in PhysicsStatistics)
+        // - IsFalling=true requires CancelHorizontalMotion=true (enforced in PhysicsHelper)
         // - IsFalling=true requires CancelVerticalMotion=false (enforced here)
-        if (pixel.Statistics.IsFalling) pixel.Statistics = pixel.Statistics with { CancelVerticalMotion = false };
+        if (pixel.Physics.IsFalling) pixel.Physics = pixel.Physics with { CancelVerticalMotion = false };
 
         // If vertical motion is canceled, the pixel stays in place
-        if (pixel.Statistics.CancelVerticalMotion) return (origin, origin);
+        if (pixel.Physics.CancelVerticalMotion) return (origin, origin);
 
         int x = origin.X;
         int y = origin.Y;
@@ -61,27 +60,27 @@ public class LiquidBehaviour : IPixelBehaviour
             if (belowPixel.IsEmpty(pixel))
             {
                 // Calculate momentum as the pixel falls downward
-                pixel.Enforcers.ApplyMomentum(pixel);
+                pixel.Physics.ApplyMomentum(pixel);
                 return (origin, new Vector2I(origin.X, origin.Y + 1));
             }
         }
 
-        if (pixel.Statistics.CancelVerticalMotion) return (origin, origin);
+        if (pixel.Physics.CancelVerticalMotion) return (origin, origin);
 
         // If can't move directly down, calculate how the liquid should flow laterally
         // Apply flow physics to the liquid (handles spread patterns and momentum)
-        pixel.Enforcers.ApplyFlow(pixel, origin, chunk);
+        pixel.Physics.ApplyFlow(pixel, origin, chunk);
 
         // Check if the pixel should stop moving (based on physics thresholds like friction)
         // This simulates how real liquids can stop flowing in certain conditions
-        if (pixel.Enforcers.EnforceStop(pixel))
+        if (pixel.Physics.EnforceStop(pixel))
         {
             return (origin, origin);
         }
 
         // Generate a list of possible horizontal offsets based on flow resistance
         List<Vector2I> coords = new List<Vector2I>();
-        for (int i = 1; i < pixel.Statistics.Viscosity; i++)
+        for (int i = 1; i < pixel.Physics.Viscosity; i++)
         {
             coords.Add(new Vector2I(i, 0)); // Horizontal offsets (will be multiplied by direction)
         }

@@ -13,14 +13,13 @@ public class EmptyBehaviour : IPixelBehaviour
 {
     public void InitializePhysics(PixelElement pixel)
     {
-        pixel.Statistics = PhysicsStatistics.Empty;
-        pixel.Enforcers = PhysicsEnforcers.Empty;
+        pixel.Physics = PhysicsHelper.Empty;
     }
 
     public void UpdatePhysics(PixelElement pixel)
     {
-        // Apply enforcers to reset physics state
-        pixel.Enforcers.ResetPhysics(pixel);
+        // Apply helper to reset physics state
+        pixel.Physics.ResetPhysics(pixel);
     }
 
     public bool ShouldFall(PixelElement pixel)

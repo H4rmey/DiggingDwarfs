@@ -89,7 +89,7 @@ public partial class PixelChunk : Node2D
             {
                 pixel.CheckSurroundingPixels(position, this, (adjacentPixel, pos) =>
                 {
-                    adjacentPixel.Statistics = adjacentPixel.Statistics with { CancelHorizontalMotion = false, CancelVerticalMotion = false };
+                    adjacentPixel.Physics = adjacentPixel.Physics with { CancelHorizontalMotion = false, CancelVerticalMotion = false };
                 });
             }
         }
@@ -326,8 +326,8 @@ public partial class PixelChunk : Node2D
         var composedAir = PixelFactory.CreateAir();
         
         // Test that composed pixels have the expected properties
-        GD.Print($"Composed solid - Type: {composedSolid.Type}, Mass: {composedSolid.Statistics.Mass}");
-        GD.Print($"Composed air - Type: {composedAir.Type}, Mass: {composedAir.Statistics.Mass}");
+        GD.Print($"Composed solid - Type: {composedSolid.Type}, Mass: {composedSolid.Physics.Mass}");
+        GD.Print($"Composed air - Type: {composedAir.Type}, Mass: {composedAir.Physics.Mass}");
         
         // Test IsEmpty logic between composed pixels
         bool airEmptyForSolid = composedAir.IsEmpty(composedSolid);

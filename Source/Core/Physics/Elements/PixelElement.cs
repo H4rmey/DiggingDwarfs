@@ -19,9 +19,8 @@ public class PixelElement
     public Color BaseColor;
     public Color Color;
 
-    // Composition-based physics system
-    public PhysicsStatistics Statistics { get; set; }
-    public PhysicsEnforcers Enforcers { get; set; }
+    // Unified physics system
+    public PhysicsHelper Physics { get; set; }
 
     // Unified behavior component
     public IPixelBehaviour Behaviour { get; set; }
@@ -33,13 +32,12 @@ public class PixelElement
         Color     = Colors.Purple;
         Type      = PixelType.Empty;
         
-        // Initialize the new physics system with default empty values
-        Statistics = PhysicsStatistics.Empty;
-        Enforcers = PhysicsEnforcers.Empty;
+        // Initialize the physics system with default empty values
+        Physics = PhysicsHelper.Empty;
         
         // Apply random resistance coefficient for backward compatibility
         float randomFriction = (float)GD.RandRange(0.0f, 1.0f);
-        Statistics = Statistics with
+        Physics = Physics with
         {
             HorizontalFriction = randomFriction,
             VerticalFriction = randomFriction
@@ -48,7 +46,7 @@ public class PixelElement
     
     public virtual bool IsEmpty(PixelElement element)
     {
-        return element.Statistics.Mass > Statistics.Mass;
+        return element.Physics.Mass > Physics.Mass;
     }
     
     public virtual (Vector2I Current, Vector2I Next) GetSwapPosition(Vector2I origin, PixelChunk chunk)
