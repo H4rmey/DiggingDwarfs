@@ -6,7 +6,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${env:GODOT4}",
+            "program": "C:\\Users\\hammi\\Documents\\projects\\software\\windows\\godot_csharp\\Godot_v4.4.1-stable_mono_win64_console.exe",
             "args": [],
             "cwd": "${workspaceFolder}",
             "stopAtEntry": false,

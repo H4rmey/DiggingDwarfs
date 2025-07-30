@@ -97,6 +97,13 @@ public struct PhysicsHelper
     /// Direction of momentum movement
     /// </summary>
     public Vector2I MomentumDirection { get; set; }
+    
+    /// <summary>
+    /// Sets the stability based on the pixel around it, only used by Solid/Structure pixels
+    ///     on Structure pixels, we set a stability value. The bigger the structure the better the stability (some other rules apply)
+    ///     on Solid pixels, we apply the stability by adding it to Vertical/Horizontal Friction
+    /// </summary>
+    public float Stability { get; set; }
 
     #endregion
 
@@ -110,8 +117,8 @@ public struct PhysicsHelper
     public bool ShouldStop(PixelElement pixel)
     {
         if (this.HaltThreshold <= 0) return false;
-        
-        return GD.RandRange(0.0f, 1.0f) < this.HorizontalFriction * this.HaltThreshold;
+
+        return GD.RandRange(0.0f, 1.0f) < this.HorizontalFriction;
     }
     
     /// <summary>
@@ -122,28 +129,9 @@ public struct PhysicsHelper
     {
         if (this.IsFalling)
         {
-            // Calculate velocity magnitude (use Mathf.Abs for each component as Vector2I doesn't have magnitude)
-            float velocityMagnitude = Mathf.Sqrt(
-                Mathf.Pow(Mathf.Abs(this.Velocity.X), 2) +
-                Mathf.Pow(Mathf.Abs(this.Velocity.Y), 2)
-            );
-            
-            // If velocity is zero, add a base velocity downward for falling pixels
-            if (velocityMagnitude < 0.01f)
-            {
-                pixel.Physics = pixel.Physics with
-                {
-                    Velocity = new Vector2I(0, 1)  // Start with downward velocity
-                };
-                velocityMagnitude = 1.0f;
-            }
-            
-            // Calculate momentum using physics formula: momentum = mass * velocity
-            float newMomentum = this.Mass * velocityMagnitude;
-            
             pixel.Physics = pixel.Physics with
             {
-                Momentum = newMomentum
+                Momentum = Momentum + (Mass * MomentumRate)
             };
         }
     }
@@ -250,7 +238,7 @@ public struct PhysicsHelper
     {
         Mass = 0.2f,
         Density = 1.0f,
-        HorizontalFriction = 0.1f,
+        HorizontalFriction = 0.5f,
         VerticalFriction = 0.1f,
         Viscosity = 8,
         MomentumRate = 0.5f,
@@ -270,15 +258,15 @@ public struct PhysicsHelper
     {
         Mass = 0.33f,
         Density = 2.0f,
-        HorizontalFriction = 0.5f,
-        VerticalFriction = 0.5f,
+        HorizontalFriction = 0.25f,
+        VerticalFriction = 0.25f,
         Viscosity = 0,
         MomentumRate = 1.0f,
         HaltThreshold = 0.5f,
-        IsFalling = false,
         Velocity = Vector2I.Zero,
-        CancelHorizontalMotion = true,
-        CancelVerticalMotion = true,
+        IsFalling = true,
+        CancelHorizontalMotion = false,
+        CancelVerticalMotion = false,
         Momentum = 0f,
         MomentumDirection = Vector2I.Zero
     };
