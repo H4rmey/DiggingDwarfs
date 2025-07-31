@@ -24,12 +24,12 @@ public struct PhysicsHelper
     /// <summary>
     /// Resistance coefficient - affects how easily the pixel stops move
     /// </summary>
-    public float HorizontalFriction { get; set; }
+    public float HorizontalStability { get; set; }
 
     /// <summary>
     /// Resistance coefficient - affects how easily the pixel stops move
     /// </summary>
-    public float VerticalFriction { get; set; }
+    public float VerticalStability { get; set; }
     
     /// <summary>
     /// Whether the pixel will resolve horizontal motion or not
@@ -40,6 +40,13 @@ public struct PhysicsHelper
     /// Whether the pixel will resolve vertical motion or not
     /// </summary>
     public bool CancelVerticalMotion { get; set; }
+    
+    /// <summary>
+    /// Sets the stability based on the pixel around it, only used by Solid/Structure pixels
+    ///     on Structure pixels, we set a stability value. The bigger the structure the better the stability (some other rules apply)
+    ///     on Solid pixels, we apply the stability by adding it to Vertical/Horizontal Stability
+    /// </summary>
+    public float Stability { get; set; }
     
     /// <summary>
     /// Flow resistance for liquid-like behavior - higher values mean more fluid movement
@@ -97,13 +104,6 @@ public struct PhysicsHelper
     /// Direction of momentum movement
     /// </summary>
     public Vector2I MomentumDirection { get; set; }
-    
-    /// <summary>
-    /// Sets the stability based on the pixel around it, only used by Solid/Structure pixels
-    ///     on Structure pixels, we set a stability value. The bigger the structure the better the stability (some other rules apply)
-    ///     on Solid pixels, we apply the stability by adding it to Vertical/Horizontal Friction
-    /// </summary>
-    public float Stability { get; set; }
 
     #endregion
 
@@ -118,7 +118,7 @@ public struct PhysicsHelper
     {
         if (this.HaltThreshold <= 0) return false;
 
-        return GD.RandRange(0.0f, 1.0f) < this.HorizontalFriction;
+        return GD.RandRange(0.0f, 1.0f) < this.HorizontalStability;
     }
     
     /// <summary>
@@ -136,14 +136,24 @@ public struct PhysicsHelper
         }
     }
     
-    /// <summary>
-    /// Handles stopping behavior and resets momentum when appropriate
-    /// </summary>
-    /// <param name="pixel">The pixel to potentially stop</param>
-    /// <returns>True if the pixel was stopped</returns>
-    public bool EnforceStop(PixelElement pixel)
+    public bool DoCancelVerticalMotion(PixelElement pixel, float stability)
     {
-        if (ShouldStop(pixel))
+        if (GD.RandRange(0.0f, 1.0f) < stability)
+        {
+            pixel.Physics = pixel.Physics with
+            {
+                CancelVerticalMotion = true,
+                Momentum = 0.0f,
+                MomentumDirection = Vector2I.Zero
+            };
+            return true;
+        }
+        return false;
+    }
+
+    public bool DoCancelHorizontalMotion(PixelElement pixel, float stability)
+    {
+        if (GD.RandRange(0.0f, 1.0f) < stability)
         {
             pixel.Physics = pixel.Physics with
             {
@@ -179,7 +189,7 @@ public struct PhysicsHelper
         if (this.Viscosity > 0)
         {
             // Copy the value to use inside the lambda to avoid 'this' capture in struct
-            float horizontalFriction = this.HorizontalFriction;
+            float horizontalFriction = this.HorizontalStability;
             
             // Trigger surrounding pixels to potentially start flowing
             pixel.CheckSurroundingPixels(origin, chunk, (adjacentPixel, pos) => {
@@ -218,8 +228,8 @@ public struct PhysicsHelper
     {
         Mass = 0f,
         Density = 0f,
-        HorizontalFriction = 0f,
-        VerticalFriction = 0f,
+        HorizontalStability = 0f,
+        VerticalStability = 0f,
         Viscosity = 0,
         MomentumRate = 0f,
         HaltThreshold = 0f,
@@ -238,8 +248,8 @@ public struct PhysicsHelper
     {
         Mass = 0.2f,
         Density = 1.0f,
-        HorizontalFriction = 0.5f,
-        VerticalFriction = 0.1f,
+        HorizontalStability = 0.5f,
+        VerticalStability = 0.1f,
         Viscosity = 8,
         MomentumRate = 0.5f,
         HaltThreshold = 0.05f,
@@ -258,8 +268,8 @@ public struct PhysicsHelper
     {
         Mass = 0.33f,
         Density = 2.0f,
-        HorizontalFriction = 0.25f,
-        VerticalFriction = 0.25f,
+        HorizontalStability = 0.25f,
+        VerticalStability = 0.25f,
         Viscosity = 0,
         MomentumRate = 1.0f,
         HaltThreshold = 0.5f,
@@ -278,8 +288,8 @@ public struct PhysicsHelper
     {
         Mass = 10.0f,
         Density = 5.0f,
-        HorizontalFriction = 1.0f,
-        VerticalFriction = 1.0f,
+        HorizontalStability = 1.0f,
+        VerticalStability = 1.0f,
         Viscosity = 0,
         MomentumRate = 0f,
         HaltThreshold = 1.0f,

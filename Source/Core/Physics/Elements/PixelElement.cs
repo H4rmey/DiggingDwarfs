@@ -39,8 +39,8 @@ public class PixelElement
         float randomFriction = (float)GD.RandRange(0.0f, 1.0f);
         Physics = Physics with
         {
-            HorizontalFriction = randomFriction,
-            VerticalFriction = randomFriction
+            HorizontalStability = randomFriction,
+            VerticalStability = randomFriction
         };
     }
     

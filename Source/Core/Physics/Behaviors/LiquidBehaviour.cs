@@ -73,7 +73,7 @@ public class LiquidBehaviour : IPixelBehaviour
 
         // Check if the pixel should stop moving (based on physics thresholds like friction)
         // This simulates how real liquids can stop flowing in certain conditions
-        if (pixel.Physics.EnforceStop(pixel))
+        if (pixel.Physics.DoCancelHorizontalMotion(pixel, pixel.Physics.HorizontalStability))
         {
             return (origin, origin);
         }

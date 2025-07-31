@@ -133,6 +133,12 @@ public partial class PixelChunk : Node2D
                 GD.Print(brushNode.GetBrushInfo());
             }
         }
+        
+        // Debug: Print pixel data when "d" is pressed
+        if (Godot.Input.IsActionJustPressed("ui_accept") || Godot.Input.IsKeyPressed(Key.D))
+        {
+            PrintPixelDataAtMouse();
+        }
     }
 
     //public override void _Process(double delta)
@@ -351,5 +357,59 @@ public partial class PixelChunk : Node2D
         
         GD.Print("✓ Composition integration test completed successfully");
         GD.Print("=== Integration test finished ===");
+    }
+    
+    /// <summary>
+    /// Prints detailed pixel data at the current mouse position to the console
+    /// </summary>
+    private void PrintPixelDataAtMouse()
+    {
+        // Check if mouse position is within bounds
+        if (!IsInBounds(mousePos.X, mousePos.Y))
+        {
+            GD.Print($"[Pixel Inspector] Mouse position ({mousePos.X}, {mousePos.Y}) is out of bounds");
+            return;
+        }
+        
+        // Get the pixel at mouse position
+        PixelElement pixel = pixels[mousePos.X, mousePos.Y];
+        if (pixel == null)
+        {
+            GD.Print($"[Pixel Inspector] No pixel data at position ({mousePos.X}, {mousePos.Y})");
+            return;
+        }
+        
+        // Print comprehensive pixel data
+        GD.Print("=== PIXEL DATA INSPECTOR ===");
+        GD.Print($"Position: ({mousePos.X}, {mousePos.Y})");
+        GD.Print($"Type: {pixel.Type}");
+        GD.Print($"Base Color: {pixel.BaseColor}");
+        GD.Print($"Current Color: {pixel.Color}");
+        
+        // Physics data
+        GD.Print("--- Physics Properties ---");
+        GD.Print($"Mass: {pixel.Physics.Mass}");
+        GD.Print($"Density: {pixel.Physics.Density}");
+        GD.Print($"Horizontal Stability: {pixel.Physics.HorizontalStability}");
+        GD.Print($"Vertical Stability: {pixel.Physics.VerticalStability}");
+        GD.Print($"Viscosity: {pixel.Physics.Viscosity}");
+        GD.Print($"Stability: {pixel.Physics.Stability}");
+        GD.Print($"Halt Threshold: {pixel.Physics.HaltThreshold}");
+        
+        // Motion state
+        GD.Print("--- Motion State ---");
+        GD.Print($"Is Falling: {pixel.Physics.IsFalling}");
+        GD.Print($"Cancel Horizontal Motion: {pixel.Physics.CancelHorizontalMotion}");
+        GD.Print($"Cancel Vertical Motion: {pixel.Physics.CancelVerticalMotion}");
+        GD.Print($"Velocity: {pixel.Physics.Velocity}");
+        GD.Print($"Momentum: {pixel.Physics.Momentum}");
+        GD.Print($"Momentum Direction: {pixel.Physics.MomentumDirection}");
+        
+        // Behavior information
+        GD.Print("--- Behavior Components ---");
+        GD.Print($"Movement Behavior: {(pixel.Behaviour != null ? pixel.Behaviour.GetType().Name : "None")}");
+        GD.Print($"Visual Behavior: {(pixel.VisualBehavior != null ? pixel.VisualBehavior.GetType().Name : "None")}");
+        
+        GD.Print("=== END PIXEL DATA ===");
     }
 }

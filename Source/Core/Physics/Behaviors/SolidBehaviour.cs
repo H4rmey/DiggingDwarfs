@@ -33,20 +33,11 @@ public class SolidBehaviour : IPixelBehaviour
 
     public (Vector2I Current, Vector2I Next) GetSwapPosition(Vector2I origin, PixelChunk chunk, PixelElement pixel)
     {
-        // 
-        pixel.CheckSurroundingPixels(origin, chunk, (adjacentPixel, pos) =>
-        {
-            if (GD.RandRange(0.0f, 1.0f) < pixel.Physics.HorizontalFriction)
-            {
-                adjacentPixel.Physics = adjacentPixel.Physics with { CancelHorizontalMotion = false, CancelVerticalMotion = false };
-            }
-        });
-
         // if a pixel is falling, make sure the vertical motion is allowed.
         if (pixel.Physics.IsFalling) pixel.Physics = pixel.Physics with { CancelVerticalMotion = false };
-
-        if (pixel.Physics.CancelVerticalMotion) return (origin, origin);
         
+        if (pixel.Physics.CancelVerticalMotion)                                           return (origin, origin);
+        //if (pixel.Physics.DoCancelVerticalMotion(pixel, pixel.Physics.VerticalStability)) return (origin, origin);
 
 
         // 1. Check if you can place a pixel directly below
@@ -61,9 +52,10 @@ public class SolidBehaviour : IPixelBehaviour
                 // TODO: make it so the IsFalling is only set based on a calculation with mass, momentum and friction.
                 chunk.pixels[origin.X, origin.Y + 1].Physics = chunk.pixels[origin.X, origin.Y + 1].Physics with { IsFalling = true, CancelVerticalMotion = false };
 
+                // when a pixel falls down next to a another pixel it has a chance to "drag" the other pixel with it
                 pixel.CheckSurroundingPixels(origin, chunk, (adjacentPixel, pos) =>
                 {
-                    if (GD.RandRange(0.0f, 1.0f) < pixel.Physics.HorizontalFriction)
+                    if (GD.RandRange(0.0f, 1.0f) < pixel.Physics.HorizontalStability)
                     {
                         adjacentPixel.Physics = adjacentPixel.Physics with { CancelHorizontalMotion = false, CancelVerticalMotion = false };
                     }
@@ -76,11 +68,9 @@ public class SolidBehaviour : IPixelBehaviour
         }
 
         // 1.1 Handle sudden stop using enforcers
-        // suddenstop is used to restrict sideways momentum
-        if (pixel.Physics.CancelHorizontalMotion) return (origin, origin);
-
-        
-        if (pixel.Physics.EnforceStop(pixel)) return (origin, origin);
+        // DoCancelHorizontalMotion is used to suddenly stop the pixel from moving
+        if (pixel.Physics.CancelHorizontalMotion)                                             return (origin, origin);
+        if (pixel.Physics.DoCancelHorizontalMotion(pixel, pixel.Physics.HorizontalStability)) return (origin, origin);
         
         // 2. If there is no place directly below -> check the belowLeft and belowRight side in a random order
         var diagonalPositions = new List<Vector2I>
@@ -130,7 +120,6 @@ public class SolidBehaviour : IPixelBehaviour
         if (!pixel.Physics.IsFalling && pixel.Physics.Momentum > 0)
         {
             // If we haven't set a momentum direction yet (just landed), set it based on last diagonal movement
-            GD.Print(pixel.Physics.MomentumDirection);
             if (pixel.Physics.MomentumDirection == Vector2I.Zero)
             {
                 // Use the X component of the last diagonal movement to determine direction
@@ -148,7 +137,7 @@ public class SolidBehaviour : IPixelBehaviour
                 {
                     // Decrease momentum by the HorizontalFriction. 
                     // TODO: resolve if HorizontalFriction is the correct variable to use or if we should use another one
-                    float newMomentum = pixel.Physics.Momentum - pixel.Physics.HorizontalFriction;
+                    float newMomentum = pixel.Physics.Momentum - pixel.Physics.HorizontalStability;
                     if (newMomentum <= 0)
                     {
                         pixel.Physics = pixel.Physics with
