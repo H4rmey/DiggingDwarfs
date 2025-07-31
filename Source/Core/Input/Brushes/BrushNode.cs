@@ -263,6 +263,7 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
                 PixelType.Empty => 0,
                 PixelType.Solid => 1,
                 PixelType.Liquid => 2,
+                PixelType.Structure => 3,
                 _ => 0
             };
         }
@@ -277,6 +278,7 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
                 0 => PixelFactory.CreateAir(),
                 1 => PixelFactory.CreateSolid(),
                 2 => PixelFactory.CreateLiquid(),
+                3 => PixelFactory.CreateStructure(),
                 _ => PixelFactory.CreateAir()
             };
         }

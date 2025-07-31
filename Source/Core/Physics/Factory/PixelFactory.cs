@@ -19,9 +19,9 @@ public static class PixelFactory
     {
         var pixel = new PixelElement
         {
-            Type = PixelType.Empty,
-            Behaviour = new EmptyBehaviour(),
-            VisualBehavior = new AirVisualBehavior()
+            Type            = PixelType.Empty,
+            Behaviour       = new EmptyBehaviour(),
+            VisualBehavior  = new AirVisualBehavior()
         };
         
         // Initialize physics using the unified behavior
@@ -90,7 +90,7 @@ public static class PixelFactory
         {
             Type = PixelType.Solid, // Structures use solid state but with different behavior
             Behaviour = new StructureBehaviour(),
-            VisualBehavior = new SolidVisualBehavior() // Reuse solid visual for now
+            VisualBehavior = new StructureVisualBehavior() // Reuse solid visual for now
         };
         
         // Initialize physics using the unified behavior

@@ -40,7 +40,8 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
             {
                 PixelFactory.CreateAir(),
                 PixelFactory.CreateSolid(),
-                PixelFactory.CreateLiquid()
+                PixelFactory.CreateLiquid(),
+                PixelFactory.CreateStructure()
             };
             
             // Set default values
@@ -139,7 +140,7 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
                 PixelType.Empty => "Air",
                 PixelType.Solid => "Solid",
                 PixelType.Liquid => "Liquid",
-                PixelType.Gas => "Gas",
+                PixelType.Structure => "Structure",
                 _ => "Unknown"
             };
         }

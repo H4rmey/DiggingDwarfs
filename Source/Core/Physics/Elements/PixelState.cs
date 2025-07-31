@@ -6,5 +6,6 @@ public enum PixelType
     Solid,
     Falling,
     Liquid,
-    Gas
+    Gas,
+    Structure
 }
