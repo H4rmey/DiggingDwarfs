@@ -2,7 +2,7 @@
 
 A pixel physics simulation game built with Godot and C#, featuring a composition-based architecture for flexible and scalable particle systems.
 
-## 🏗️ Project Structure
+## 🏗️ Project Scaffolding
 
 The project has been completely reorganized for better maintainability and scalability:
 
@@ -133,13 +133,13 @@ PixelElement (concrete)
 ## 🔄 Migration Status
 
 ### ✅ Completed
-- [x] Project structure reorganization
+- [x] Project scaffolding reorganization
 - [x] Composition-based pixel system
 - [x] Modular behavior architecture
 - [x] Factory pattern implementation
 - [x] Brush system modularization
 - [x] Resource organization
-- [x] Documentation structure
+- [x] Documentation scaffolding
 
 ### 🔄 In Progress
 - [ ] Complete namespace updates

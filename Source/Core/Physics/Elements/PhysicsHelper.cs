@@ -30,6 +30,10 @@ public struct PhysicsHelper
     /// Resistance coefficient - affects how easily the pixel stops move
     /// </summary>
     public float VerticalStability { get; set; }
+
+    public float TotalHorizontalStability { get; set; }
+
+    public float TotalVerticalStability { get; set; }
     
     /// <summary>
     /// Whether the pixel will resolve horizontal motion or not
@@ -42,11 +46,13 @@ public struct PhysicsHelper
     public bool CancelVerticalMotion { get; set; }
     
     /// <summary>
-    /// Sets the stability based on the pixel around it, only used by Solid/Structure pixels
-    ///     on Structure pixels, we set a stability value. The bigger the structure the better the stability (some other rules apply)
+    /// Sets the stability based on the pixel around it, only used by Solid/Scaffolding pixels
+    ///     on Scaffolding pixels, we set a stability value. The bigger the scaffolding the better the stability (some other rules apply)
     ///     on Solid pixels, we apply the stability by adding it to Vertical/Horizontal Stability
     /// </summary>
     public float Stability { get; set; }
+
+    public float TotalStability { get; set; }
     
     /// <summary>
     /// Flow resistance for liquid-like behavior - higher values mean more fluid movement
@@ -270,6 +276,7 @@ public struct PhysicsHelper
         Density = 2.0f,
         HorizontalStability = 0.25f,
         VerticalStability = 0.25f,
+        Stability = 1.0f,
         Viscosity = 0,
         MomentumRate = 1.0f,
         HaltThreshold = 0.5f,
@@ -282,9 +289,9 @@ public struct PhysicsHelper
     };
     
     /// <summary>
-    /// Creates physics helper for immovable structure behavior
+    /// Creates physics helper for immovable scaffolding behavior
     /// </summary>
-    public static PhysicsHelper Structure => new PhysicsHelper
+    public static PhysicsHelper Scaffolding => new PhysicsHelper
     {
         Mass = 10.0f,
         Density = 5.0f,
@@ -293,10 +300,10 @@ public struct PhysicsHelper
         Viscosity = 0,
         MomentumRate = 0f,
         HaltThreshold = 1.0f,
-        IsFalling = false,
         Velocity = Vector2I.Zero,
-        CancelHorizontalMotion = true,
-        CancelVerticalMotion = true,
+        IsFalling = true,
+        CancelHorizontalMotion = false,
+        CancelVerticalMotion = false,
         Momentum = 0f,
         MomentumDirection = Vector2I.Zero
     };

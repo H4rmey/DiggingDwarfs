@@ -15,7 +15,7 @@ public partial class PixelChunk : Node2D
 {
     [ExportGroup("parameters")]
     [Export]
-    public Vector2I Size = new Vector2I(128, 72);
+    public Vector2I Size = new Vector2I(32, 18);
     
     private Image image;
     private Vector2I mousePos;
@@ -381,34 +381,38 @@ public partial class PixelChunk : Node2D
         
         // Print comprehensive pixel data
         GD.Print("=== PIXEL DATA INSPECTOR ===");
-        GD.Print($"Position: ({mousePos.X}, {mousePos.Y})");
-        GD.Print($"Type: {pixel.Type}");
-        GD.Print($"Base Color: {pixel.BaseColor}");
-        GD.Print($"Current Color: {pixel.Color}");
-        
-        // Physics data
-        GD.Print("--- Physics Properties ---");
-        GD.Print($"Mass: {pixel.Physics.Mass}");
-        GD.Print($"Density: {pixel.Physics.Density}");
-        GD.Print($"Horizontal Stability: {pixel.Physics.HorizontalStability}");
-        GD.Print($"Vertical Stability: {pixel.Physics.VerticalStability}");
-        GD.Print($"Viscosity: {pixel.Physics.Viscosity}");
-        GD.Print($"Stability: {pixel.Physics.Stability}");
-        GD.Print($"Halt Threshold: {pixel.Physics.HaltThreshold}");
-        
-        // Motion state
-        GD.Print("--- Motion State ---");
-        GD.Print($"Is Falling: {pixel.Physics.IsFalling}");
-        GD.Print($"Cancel Horizontal Motion: {pixel.Physics.CancelHorizontalMotion}");
-        GD.Print($"Cancel Vertical Motion: {pixel.Physics.CancelVerticalMotion}");
-        GD.Print($"Velocity: {pixel.Physics.Velocity}");
-        GD.Print($"Momentum: {pixel.Physics.Momentum}");
-        GD.Print($"Momentum Direction: {pixel.Physics.MomentumDirection}");
+        //GD.Print($"Position: ({mousePos.X}, {mousePos.Y})");
+        //GD.Print($"Type: {pixel.Type}");
+        //GD.Print($"Base Color: {pixel.BaseColor}");
+        //GD.Print($"Current Color: {pixel.Color}");
         
         // Behavior information
         GD.Print("--- Behavior Components ---");
         GD.Print($"Movement Behavior: {(pixel.Behaviour != null ? pixel.Behaviour.GetType().Name : "None")}");
         GD.Print($"Visual Behavior: {(pixel.VisualBehavior != null ? pixel.VisualBehavior.GetType().Name : "None")}");
+
+        // Physics data
+        GD.Print("--- Physics Properties ---");
+        //GD.Print($"Mass: {pixel.Physics.Mass}");
+        //GD.Print($"Density: {pixel.Physics.Density}");
+        //GD.Print($"Horizontal Stability: {pixel.Physics.HorizontalStability}");
+        //GD.Print($"Vertical Stability: {pixel.Physics.VerticalStability}");
+        //GD.Print($"Viscosity: {pixel.Physics.Viscosity}");
+        //GD.Print($"Halt Threshold: {pixel.Physics.HaltThreshold}");
+        GD.Print($"Stability: {pixel.Physics.Stability}");
+        GD.Print($"HorizontalStability: {pixel.Physics.HorizontalStability}");
+        GD.Print($"VerticalStability: {pixel.Physics.VerticalStability}");
+        GD.Print($"TotalHorizontalStability: {pixel.Physics.TotalHorizontalStability}");
+        GD.Print($"TotalVerticalStability: {pixel.Physics.TotalVerticalStability}");
+        
+        // Motion state
+        //GD.Print("--- Motion State ---");
+        //GD.Print($"Is Falling: {pixel.Physics.IsFalling}");
+        //GD.Print($"Cancel Horizontal Motion: {pixel.Physics.CancelHorizontalMotion}");
+        //GD.Print($"Cancel Vertical Motion: {pixel.Physics.CancelVerticalMotion}");
+        //GD.Print($"Velocity: {pixel.Physics.Velocity}");
+        //GD.Print($"Momentum: {pixel.Physics.Momentum}");
+        //GD.Print($"Momentum Direction: {pixel.Physics.MomentumDirection}");
         
         GD.Print("=== END PIXEL DATA ===");
     }

@@ -82,13 +82,13 @@ public static class PixelFactory
     }
 
     /// <summary>
-    /// Creates a structure pixel that acts as an immovable barrier
+    /// Creates a scaffolding pixel that acts as an immovable barrier
     /// </summary>
-    public static PixelElement CreateStructure()
+    public static PixelElement CreateScaffolding()
     {
         var pixel = new PixelElement
         {
-            Type = PixelType.Solid, // Structures use solid state but with different behavior
+            Type = PixelType.Solid, // Scaffoldings use solid state but with different behavior
             Behaviour = new ScaffoldingBehaviour(),
             VisualBehavior = new ScaffoldingVisualBehaviour() // Reuse solid visual for now
         };

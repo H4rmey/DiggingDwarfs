@@ -7,5 +7,5 @@ public enum PixelType
     Falling,
     Liquid,
     Gas,
-    Structure
+    Scaffolding
 }

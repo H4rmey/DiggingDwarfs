@@ -76,7 +76,7 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
                 new PixelTypeInfo("Air", PixelFactory.CreateAir, PixelType.Empty),
                 new PixelTypeInfo("Solid", PixelFactory.CreateSolid, PixelType.Solid),
                 new PixelTypeInfo("Liquid", PixelFactory.CreateLiquid, PixelType.Liquid),
-                new PixelTypeInfo("Structure", PixelFactory.CreateStructure, PixelType.Structure)
+                new PixelTypeInfo("Scaffolding", PixelFactory.CreateScaffolding, PixelType.Scaffolding)
             };
             
             // Set default values
