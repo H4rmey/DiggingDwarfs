@@ -3,11 +3,29 @@ using System.Collections.Generic;
 using System.Linq;
 using SharpDiggingDwarfs.Core.Physics.Elements;
 using SharpDiggingDwarfs.Core.Physics.Factory;
+using System;
 
 namespace SharpDiggingDwarfs.Core.Input.Brushes
 {
     /// <summary>
-    /// Manages brush selection, size, and pixel type selection
+    /// Represents a pixel type that can be selected in the brush system
+    /// </summary>
+    public struct PixelTypeInfo
+    {
+        public string Name { get; init; }
+        public Func<PixelElement> Factory { get; init; }
+        public PixelType Type { get; init; }
+        
+        public PixelTypeInfo(string name, Func<PixelElement> factory, PixelType type)
+        {
+            Name = name;
+            Factory = factory;
+            Type = type;
+        }
+    }
+
+    /// <summary>
+    /// Manages brush selection, size, and pixel type selection with centralized pixel type registry
     /// </summary>
     public class BrushManager
     {
@@ -18,13 +36,30 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
         private int currentBrushIndex;
         private int currentSize;
         private int currentPixelTypeIndex;
-        private PixelElement[] availablePixelTypes;
+        private PixelTypeInfo[] availablePixelTypes;
         
         public IBrush CurrentBrush => availableBrushes[currentBrushIndex];
         public int CurrentSize => currentSize;
-        public PixelElement CurrentPixelType => availablePixelTypes[currentPixelTypeIndex];
+        public PixelElement CurrentPixelType => availablePixelTypes[currentPixelTypeIndex].Factory();
         public string CurrentBrushName => CurrentBrush.Name;
-        public string CurrentPixelTypeName => GetPixelTypeName(CurrentPixelType);
+        public string CurrentPixelTypeName => availablePixelTypes[currentPixelTypeIndex].Name;
+        public int AvailablePixelTypesCount => availablePixelTypes.Length;
+        public int AvailableBrushesCount => availableBrushes.Count;
+        
+        /// <summary>
+        /// Gets all available pixel type information
+        /// </summary>
+        public PixelTypeInfo[] GetAvailablePixelTypes() => availablePixelTypes;
+        
+        /// <summary>
+        /// Gets pixel type info by index
+        /// </summary>
+        public PixelTypeInfo GetPixelTypeInfo(int index)
+        {
+            if (index >= 0 && index < availablePixelTypes.Length)
+                return availablePixelTypes[index];
+            return availablePixelTypes[0]; // Default to first type
+        }
         
         public BrushManager()
         {
@@ -35,13 +70,13 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
                 new SquareBrush()
             };
             
-            // Initialize available pixel types
-            availablePixelTypes = new PixelElement[]
+            // Initialize available pixel types with centralized registry
+            availablePixelTypes = new PixelTypeInfo[]
             {
-                PixelFactory.CreateAir(),
-                PixelFactory.CreateSolid(),
-                PixelFactory.CreateLiquid(),
-                PixelFactory.CreateStructure()
+                new PixelTypeInfo("Air", PixelFactory.CreateAir, PixelType.Empty),
+                new PixelTypeInfo("Solid", PixelFactory.CreateSolid, PixelType.Solid),
+                new PixelTypeInfo("Liquid", PixelFactory.CreateLiquid, PixelType.Liquid),
+                new PixelTypeInfo("Structure", PixelFactory.CreateStructure, PixelType.Structure)
             };
             
             // Set default values
@@ -107,6 +142,40 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
         }
         
         /// <summary>
+        /// Sets the pixel type directly by index
+        /// </summary>
+        public void SetPixelTypeIndex(int index)
+        {
+            if (index >= 0 && index < availablePixelTypes.Length)
+            {
+                currentPixelTypeIndex = index;
+            }
+        }
+        
+        /// <summary>
+        /// Creates a pixel of the specified type index
+        /// </summary>
+        public PixelElement CreatePixelByIndex(int index)
+        {
+            if (index >= 0 && index < availablePixelTypes.Length)
+            {
+                return availablePixelTypes[index].Factory();
+            }
+            return availablePixelTypes[0].Factory(); // Default to first type
+        }
+        
+        /// <summary>
+        /// Sets the brush type directly by index
+        /// </summary>
+        public void SetBrushIndex(int index)
+        {
+            if (index >= 0 && index < availableBrushes.Count)
+            {
+                currentBrushIndex = index;
+            }
+        }
+        
+        /// <summary>
         /// Gets the positions that would be affected by painting at the given position
         /// </summary>
         public List<Vector2I> GetPaintPositions(Vector2I centerPosition)
@@ -130,20 +199,6 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
             return CurrentPixelType.Clone();
         }
         
-        /// <summary>
-        /// Gets a human-readable name for a pixel type
-        /// </summary>
-        private string GetPixelTypeName(PixelElement pixel)
-        {
-            return pixel.Type switch
-            {
-                PixelType.Empty => "Air",
-                PixelType.Solid => "Solid",
-                PixelType.Liquid => "Liquid",
-                PixelType.Structure => "Structure",
-                _ => "Unknown"
-            };
-        }
         
         /// <summary>
         /// Gets debug information about current brush settings

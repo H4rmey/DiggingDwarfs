@@ -9,6 +9,18 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
     /// <summary>
     /// A Godot Node2D that provides brush functionality for painting pixels
     /// Can be used by player characters, UI systems, or any other game object
+    ///
+    /// Keyboard Controls:
+    /// - Number keys 0-9: Select pixel type directly
+    /// - C key: Switch to Circle brush
+    /// - S key: Switch to Square brush
+    /// - + key: Increase brush size
+    /// - - key: Decrease brush size
+    ///
+    /// Mouse Controls (Alternative):
+    /// - Mouse Wheel: Change pixel type
+    /// - Shift + Mouse Wheel: Change brush size
+    /// - Ctrl + Mouse Wheel: Change brush shape
     /// </summary>
     public partial class BrushNode : Node2D
     {
@@ -79,14 +91,71 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
                 UpdateMousePosition(eventMouseMotion.Position);
             }
             
+            // Process keyboard events
+            if (@event is InputEventKey eventKey && eventKey.Pressed && !eventKey.Echo)
+            {
+                HandleKeyboardInput(eventKey);
+            }
+            
             HandleBrushInput(@event);
             HandlePaintInput(@event);
+        }
+        
+        private void HandleKeyboardInput(InputEventKey eventKey)
+        {
+            bool brushChanged = false;
+            
+            // Number keys 0-9 for direct pixel type selection
+            if (eventKey.Keycode >= Key.Key0 && eventKey.Keycode <= Key.Key9)
+            {
+                int pixelIndex = (int)(eventKey.Keycode - Key.Key0);
+                // Limit to available pixel types
+                if (pixelIndex < brushManager.AvailablePixelTypesCount)
+                {
+                    brushManager.SetPixelTypeIndex(pixelIndex);
+                    brushChanged = true;
+                }
+            }
+            
+            // Brush shape selection
+            else if (eventKey.Keycode == Key.C)
+            {
+                // Set to Circle brush (index 0)
+                brushManager.SetBrushIndex(0);
+                brushChanged = true;
+            }
+            else if (eventKey.Keycode == Key.S)
+            {
+                // Set to Square brush (index 1)
+                brushManager.SetBrushIndex(1);
+                brushChanged = true;
+            }
+            // Brush size controls
+            else if (eventKey.Keycode == Key.Minus || eventKey.Keycode == Key.Kp1)
+            {
+                // Decrease brush size
+                brushManager.DecreaseBrushSize();
+                brushChanged = true;
+            }
+            else if (eventKey.Keycode == Key.Plus || eventKey.Keycode == Key.Equal || eventKey.Keycode == Key.KpAdd)
+            {
+                // Increase brush size
+                brushManager.IncreaseBrushSize();
+                brushChanged = true;
+            }
+            
+            if (brushChanged)
+            {
+                UpdatePreview();
+                EmitBrushChanged();
+            }
         }
         
         private void HandleBrushInput(InputEvent @event)
         {
             bool brushChanged = false;
             
+            // Keep the mouse wheel functionality as an alternative input method
             if (GodotInput.IsKeyPressed(Key.Shift))
             {
                 // Shift + Mouse Wheel = Change brush size
@@ -257,30 +326,24 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
         /// </summary>
         private int GetCurrentPixelTypeIndex()
         {
-            var currentPixel = brushManager.CurrentPixelType;
-            return currentPixel.Type switch
+            // Use the centralized pixel type system
+            var availableTypes = brushManager.GetAvailablePixelTypes();
+            var currentPixelType = brushManager.CurrentPixelType.Type;
+            
+            for (int i = 0; i < availableTypes.Length; i++)
             {
-                PixelType.Empty => 0,
-                PixelType.Solid => 1,
-                PixelType.Liquid => 2,
-                PixelType.Structure => 3,
-                _ => 0
-            };
+                if (availableTypes[i].Type == currentPixelType)
+                    return i;
+            }
+            return 0; // Default to first type if not found
         }
         
         /// <summary>
-        /// Get a pixel of the specified type index
+        /// Get a pixel of the specified type index using the centralized system
         /// </summary>
         public PixelElement GetPixelByIndex(int index)
         {
-            return index switch
-            {
-                0 => PixelFactory.CreateAir(),
-                1 => PixelFactory.CreateSolid(),
-                2 => PixelFactory.CreateLiquid(),
-                3 => PixelFactory.CreateStructure(),
-                _ => PixelFactory.CreateAir()
-            };
+            return brushManager.CreatePixelByIndex(index);
         }
         
         /// <summary>
@@ -288,7 +351,7 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
         /// </summary>
         public string GetBrushInfo()
         {
-            return brushManager.GetDebugInfo();
+            return $"{brushManager.GetDebugInfo()}\nControls: 0-9 = Pixel Type, C = Circle, S = Square, +/- = Size";
         }
         
         /// <summary>

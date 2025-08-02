@@ -89,8 +89,8 @@ public static class PixelFactory
         var pixel = new PixelElement
         {
             Type = PixelType.Solid, // Structures use solid state but with different behavior
-            Behaviour = new StructureBehaviour(),
-            VisualBehavior = new StructureVisualBehavior() // Reuse solid visual for now
+            Behaviour = new ScaffoldingBehaviour(),
+            VisualBehavior = new ScaffoldingVisualBehaviour() // Reuse solid visual for now
         };
         
         // Initialize physics using the unified behavior
