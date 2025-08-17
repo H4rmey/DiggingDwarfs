@@ -65,7 +65,36 @@ public class PixelElement
         return clone;
     }
 
-    public virtual void CheckSurroundingPixels(Vector2I origin, PixelChunk chunk, PixelAction action)
+    public virtual void ExecuteTopBottomLeftRight(Vector2I origin, PixelChunk chunk, PixelAction action)
+    {
+        // Define all 8 surrounding positions (including diagonals)
+        Vector2I[] surroundingPositions = new Vector2I[]
+        {
+            new Vector2I(0, -1),  // top
+            new Vector2I(-1, 0),  // left
+            new Vector2I(1, 0),   // right
+            new Vector2I(0, 1),   // bottom
+        };
+
+        foreach (Vector2I offset in surroundingPositions)
+        {
+            Vector2I checkPos = origin + offset;
+            
+            // Skip if position is out of bounds
+            if (!chunk.IsInBounds(checkPos.X, checkPos.Y))
+                continue;
+
+            // Get the pixel at this position - for proof-of-concept, skip type checking
+            var pixel = chunk.pixels[checkPos.X, checkPos.Y];
+            if (pixel != null)
+            {
+                // Invoke the action on the found pixel
+                action?.Invoke(pixel, checkPos);
+            }
+        }
+    }
+
+    public virtual void ExecuteSurroundingPixel(Vector2I origin, PixelChunk chunk, PixelAction action)
     {
         // Define all 8 surrounding positions (including diagonals)
         Vector2I[] surroundingPositions = new Vector2I[]

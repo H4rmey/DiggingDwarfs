@@ -8,6 +8,8 @@ using Godot.Collections;
 using SharpDiggingDwarfs.Core.Input.Brushes;
 using SharpDiggingDwarfs.Core.Physics.Elements;
 using SharpDiggingDwarfs.Core.Physics.Factory;
+using SharpDiggingDwarfs.Core.Physics.Behaviors;
+using System.Text.Json;
 
 namespace SharpDiggingDwarfs.Core.Rendering.Chunks;
 
@@ -87,7 +89,7 @@ public partial class PixelChunk : Node2D
             GD.Print(pixelTypeIndex);
             if (pixelTypeIndex == 0)
             {
-                pixel.CheckSurroundingPixels(position, this, (adjacentPixel, pos) =>
+                pixel.ExecuteSurroundingPixel(position, this, (adjacentPixel, pos) =>
                 {
                     adjacentPixel.Physics = adjacentPixel.Physics with { CancelHorizontalMotion = false, CancelVerticalMotion = false };
                 });
@@ -379,41 +381,72 @@ public partial class PixelChunk : Node2D
             return;
         }
         
-        // Print comprehensive pixel data
-        GD.Print("=== PIXEL DATA INSPECTOR ===");
-        //GD.Print($"Position: ({mousePos.X}, {mousePos.Y})");
-        //GD.Print($"Type: {pixel.Type}");
-        //GD.Print($"Base Color: {pixel.BaseColor}");
-        //GD.Print($"Current Color: {pixel.Color}");
+        // Check if this is a scaffolding pixel
+        if (pixel.Behaviour is ScaffoldingBehaviour scaffolding)
+        {
+            // Create scaffolding-only data object
+            var scaffoldingData = new
+            {
+                position = new { x = mousePos.X, y = mousePos.Y },
+                type = pixel.Type.ToString(),
+                scaffolding = new
+                {
+                    maxVerticalChain = scaffolding.MaxVerticalChain,
+                    maxHorizontalChain = scaffolding.MaxHorizontalChain,
+                    currentVerticalChain = scaffolding.CurrentVerticalChain,
+                    currentHorizontalChain = scaffolding.CurrentHorizontalChain,
+                    isVerticalStable = scaffolding.IsVerticalStable,
+                    isHorizontalStable = scaffolding.IsHorizontalStable,
+                    chainUtilization = new
+                    {
+                        verticalPercentage = scaffolding.MaxVerticalChain > 0 ? (double)scaffolding.CurrentVerticalChain / scaffolding.MaxVerticalChain * 100 : 0,
+                        horizontalPercentage = scaffolding.MaxHorizontalChain > 0 ? (double)scaffolding.CurrentHorizontalChain / scaffolding.MaxHorizontalChain * 100 : 0
+                    }
+                }
+            };
+            
+            // Convert to JSON with pretty formatting
+            var options = new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            };
+            
+            string jsonOutput = JsonSerializer.Serialize(scaffoldingData, options);
+            
+            GD.Print("=== SCAFFOLDING DATA JSON ===");
+            GD.Print(jsonOutput);
+            GD.Print("=== END SCAFFOLDING DATA ===");
+        }
+        else
+        {
+            GD.Print($"[Pixel Inspector] Pixel at ({mousePos.X}, {mousePos.Y}) is not a scaffolding pixel (Type: {pixel.Type})");
+        }
+    }
+    
+    /// <summary>
+    /// Extracts scaffolding-specific data if the pixel has scaffolding behavior
+    /// </summary>
+    private object GetScaffoldingData(PixelElement pixel)
+    {
+        if (pixel.Behaviour is ScaffoldingBehaviour scaffolding)
+        {
+            return new
+            {
+                maxVerticalChain = scaffolding.MaxVerticalChain,
+                maxHorizontalChain = scaffolding.MaxHorizontalChain,
+                currentVerticalChain = scaffolding.CurrentVerticalChain,
+                currentHorizontalChain = scaffolding.CurrentHorizontalChain,
+                isVerticalStable = scaffolding.IsVerticalStable,
+                isHorizontalStable = scaffolding.IsHorizontalStable,
+                chainUtilization = new
+                {
+                    verticalPercentage = scaffolding.MaxVerticalChain > 0 ? (double)scaffolding.CurrentVerticalChain / scaffolding.MaxVerticalChain * 100 : 0,
+                    horizontalPercentage = scaffolding.MaxHorizontalChain > 0 ? (double)scaffolding.CurrentHorizontalChain / scaffolding.MaxHorizontalChain * 100 : 0
+                }
+            };
+        }
         
-        // Behavior information
-        GD.Print("--- Behavior Components ---");
-        GD.Print($"Movement Behavior: {(pixel.Behaviour != null ? pixel.Behaviour.GetType().Name : "None")}");
-        GD.Print($"Visual Behavior: {(pixel.VisualBehavior != null ? pixel.VisualBehavior.GetType().Name : "None")}");
-
-        // Physics data
-        GD.Print("--- Physics Properties ---");
-        //GD.Print($"Mass: {pixel.Physics.Mass}");
-        //GD.Print($"Density: {pixel.Physics.Density}");
-        //GD.Print($"Horizontal Stability: {pixel.Physics.HorizontalStability}");
-        //GD.Print($"Vertical Stability: {pixel.Physics.VerticalStability}");
-        //GD.Print($"Viscosity: {pixel.Physics.Viscosity}");
-        //GD.Print($"Halt Threshold: {pixel.Physics.HaltThreshold}");
-        GD.Print($"Stability: {pixel.Physics.Stability}");
-        GD.Print($"HorizontalStability: {pixel.Physics.HorizontalStability}");
-        GD.Print($"VerticalStability: {pixel.Physics.VerticalStability}");
-        GD.Print($"TotalHorizontalStability: {pixel.Physics.TotalHorizontalStability}");
-        GD.Print($"TotalVerticalStability: {pixel.Physics.TotalVerticalStability}");
-        
-        // Motion state
-        //GD.Print("--- Motion State ---");
-        //GD.Print($"Is Falling: {pixel.Physics.IsFalling}");
-        //GD.Print($"Cancel Horizontal Motion: {pixel.Physics.CancelHorizontalMotion}");
-        //GD.Print($"Cancel Vertical Motion: {pixel.Physics.CancelVerticalMotion}");
-        //GD.Print($"Velocity: {pixel.Physics.Velocity}");
-        //GD.Print($"Momentum: {pixel.Physics.Momentum}");
-        //GD.Print($"Momentum Direction: {pixel.Physics.MomentumDirection}");
-        
-        GD.Print("=== END PIXEL DATA ===");
+        return null; // Not a scaffolding pixel
     }
 }

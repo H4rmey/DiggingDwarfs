@@ -53,7 +53,7 @@ public class SolidBehaviour : IPixelBehaviour
                 chunk.pixels[origin.X, origin.Y + 1].Physics = chunk.pixels[origin.X, origin.Y + 1].Physics with { IsFalling = true, CancelVerticalMotion = false };
 
                 // when a pixel falls down next to a another pixel it has a chance to "drag" the other pixel with it
-                pixel.CheckSurroundingPixels(origin, chunk, (adjacentPixel, pos) =>
+                pixel.ExecuteSurroundingPixel(origin, chunk, (adjacentPixel, pos) =>
                 {
                     if (GD.RandRange(0.0f, 1.0f) < pixel.Physics.HorizontalStability)
                     {

@@ -198,7 +198,7 @@ public struct PhysicsHelper
             float horizontalFriction = this.HorizontalStability;
             
             // Trigger surrounding pixels to potentially start flowing
-            pixel.CheckSurroundingPixels(origin, chunk, (adjacentPixel, pos) => {
+            pixel.ExecuteSurroundingPixel(origin, chunk, (adjacentPixel, pos) => {
                 if (GD.RandRange(0.0f, 1.0f) < horizontalFriction)
                 {
                     adjacentPixel.Physics = adjacentPixel.Physics with { CancelHorizontalMotion = false };
