@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
@@ -19,6 +20,7 @@ public class ScaffoldingBehaviour : IPixelBehaviour
     public int CurrentHorizontalChain = 0;
     public bool IsVerticalStable = false;
     public bool IsHorizontalStable = false;
+    public bool IsAnchor = false;
     
     public void InitializePhysics(PixelElement pixel)
     {
@@ -52,147 +54,157 @@ public class ScaffoldingBehaviour : IPixelBehaviour
         if (chunk.IsInBounds(origin.X - 1, origin.Y)) { leftPixel = chunk.pixels[origin.X - 1, origin.Y]; }
         if (chunk.IsInBounds(origin.X + 1, origin.Y)) { rightPixel = chunk.pixels[origin.X + 1, origin.Y]; }
 
-        // Move one down if none are stable
-        if (belowPixel != null && belowPixel.IsEmpty(pixel) && CurrentHorizontalChain > MaxHorizontalChain)
+        // Check if this pixel has a SOLID or out of bounds below it - makes it an Anchor Pixel
+        if (belowPixel == null || belowPixel.Type == PixelType.Solid || !chunk.IsInBounds(origin.X, origin.Y + 1))
         {
-            return (origin, new Vector2I(origin.X, origin.Y + 1));
-        }
-
-        if (pixel.Physics.CancelHorizontalMotion) { return (origin, origin);  }
-
-        // Check if left is stable
-        // If left is stable in both directions set this to stable and return
-        if (leftPixel != null && IsNeighborStable(leftPixel))
-        {
-            SetStableState(pixel);
-            IncreaseHorizontalChain(pixel, leftPixel);
-            pixel.Physics = pixel.Physics with { CancelHorizontalMotion = true };
+            IsAnchor = true;
+            IsVerticalStable = true;
             return (origin, origin);
         }
 
-        // Check if right is stable
-        // If right is stable in both directions set this to stable and return
-        if (rightPixel != null && IsNeighborStable(rightPixel))
+        // Check if this pixel lands on top of an anchor pixel or vertically stable pixel
+        if (belowPixel != null && belowPixel.Behaviour is ScaffoldingBehaviour belowScaffolding)
         {
-            SetStableState(pixel);
-            IncreaseHorizontalChain(pixel, rightPixel);
-            pixel.Physics = pixel.Physics with { CancelHorizontalMotion = true };
-            return (origin, origin);
-        }
-
-        // Check if below is stable
-        // If below is stable set this to stable and return
-        if (belowPixel != null && IsNeighborStable(belowPixel))
-        {
-            SetStableState(pixel);
-            IncreaseVerticalChain(pixel, rightPixel);
-            return (origin, origin);
-        }
-
-        // Reach the ground if moving out of bounds on the below or if you see a solid then set to stable
-        if (!chunk.IsInBounds(origin.X, origin.Y + 1))
-        {
-            // Hit bottom boundary - this is stable ground
-            SetStableState(pixel);
-            return (origin, origin);
-        }
-
-        if (belowPixel != null && belowPixel.Type == PixelType.Solid)
-        {
-            // Standing on solid ground - this is stable
-            SetStableState(pixel);
-            return (origin, origin);
-        }
-
-        // Move one down if none are stable
-        if (belowPixel != null && belowPixel.IsEmpty(pixel))
-        {
-            if (topPixel != null && topPixel.Behaviour is ScaffoldingBehaviour topBehaviour)
+            if (belowScaffolding.IsAnchor || belowScaffolding.IsVerticalStable)
             {
-                topPixel.Physics = topPixel.Physics with { CancelHorizontalMotion = false };
+                IsVerticalStable = true;
+                return (origin, origin);
             }
-
-            SetFallingState(pixel);
-
-
-            return (origin, new Vector2I(origin.X, origin.Y + 1));
         }
 
-        // If can't move down but no stable support, stay in place but mark as unstable
-        SetFallingState(pixel);
+        // Check horizontal stability (left and right)
+        var (foundStableLeft, leftChainCount) = CheckHorizontalStability(origin, chunk, -1);
+        CurrentHorizontalChain = leftChainCount;
+        
+        if (foundStableLeft)
+        {
+            IsHorizontalStable = true;
+            IsVerticalStable = true;
+            return (origin, origin);
+        }
+
+        var (foundStableRight, rightChainCount) = CheckHorizontalStability(origin, chunk, 1);
+        CurrentHorizontalChain = Math.Max(CurrentHorizontalChain, rightChainCount);
+
+        if (foundStableRight)
+        {
+            IsHorizontalStable = true;
+            IsVerticalStable = true;
+            return (origin, origin);
+        }
+
+        // Check vertical chain stability
+        //if (CheckVerticalStability(origin, chunk))
+        //{
+        //    IsVerticalStable = true;
+        //    return (origin, origin);
+        //}
+
+        // If no other options are available, fall down
+        Vector2I fallPosition = new Vector2I(origin.X, origin.Y + 1);
+        
+        // Check if we can fall
+        if (chunk.IsInBounds(fallPosition.X, fallPosition.Y))
+        {
+            PixelElement targetPixel = chunk.pixels[fallPosition.X, fallPosition.Y];
+            if (targetPixel != null && targetPixel.IsEmpty(pixel))
+            {
+                return (origin, fallPosition);
+            }
+        }
+
+        // Can't move anywhere
         return (origin, origin);
     }
 
-    private void IncreaseVerticalChain(PixelElement pixel, PixelElement otherPixel)
-    {
-        if (otherPixel.Behaviour is ScaffoldingBehaviour scaffoldBehaviour)
-        {
-            CurrentVerticalChain += scaffoldBehaviour.CurrentVerticalChain + 1;
-        }
-    }
-
-    private void IncreaseHorizontalChain(PixelElement pixel, PixelElement otherPixel)
-    {
-        if (otherPixel.Behaviour is ScaffoldingBehaviour scaffoldBehaviour)
-        {
-            CurrentHorizontalChain += scaffoldBehaviour.CurrentHorizontalChain + 1;
-        }
-    }
-
     /// <summary>
-    /// Checks if a neighbor pixel is stable (has both vertical and horizontal stability)
+    /// Checks horizontal stability in a given direction (-1 for left, 1 for right)
     /// </summary>
-    private bool IsNeighborStable(PixelElement neighborPixel)
+    /// <param name="origin">Starting position</param>
+    /// <param name="chunk">The pixel chunk</param>
+    /// <param name="direction">Direction to check (-1 for left, 1 for right)</param>
+    /// <returns>Tuple of (foundStable, chainCount)</returns>
+    private (bool foundStable, int chainCount) CheckHorizontalStability(Vector2I origin, PixelChunk chunk, int direction)
     {
-        if (neighborPixel == null) return false;
-
-        // Solid pixels are always stable
-        if (neighborPixel.Type == PixelType.Solid) return true;
-
-        // Check if it's scaffolding with stability
-        if (neighborPixel.Behaviour is ScaffoldingBehaviour scaffoldBehaviour)
-        {
-            if (scaffoldBehaviour.CurrentHorizontalChain + 1 > MaxHorizontalChain) return false;
-            if (scaffoldBehaviour.CurrentVerticalChain + 1 > MaxVerticalChain) return false;
-
-            return scaffoldBehaviour.IsVerticalStable && scaffoldBehaviour.IsHorizontalStable;
-        }
-
-        return false;
-    }
-
-    /// <summary>
-    /// Sets the pixel to a stable state (not falling, stationary)
-    /// </summary>
-    private void SetStableState(PixelElement pixel)
-    {
-        IsVerticalStable = true;
-        IsHorizontalStable = true;
-
-        pixel.Physics = pixel.Physics with
-        {
-            IsFalling = false,
-            CancelVerticalMotion = true,
-            CancelHorizontalMotion = false,
-            Momentum = 0,
-            Velocity = Vector2I.Zero,
-            MomentumDirection = Vector2I.Zero
-        };
-    }
-
-    /// <summary>
-    /// Sets the pixel to a falling state (can move, affected by gravity)
-    /// </summary>
-    private void SetFallingState(PixelElement pixel)
-    {
-        IsVerticalStable = false;
-        IsHorizontalStable = false;
+        bool foundStable = false;
+        int chainCount = 0;
         
-        pixel.Physics = pixel.Physics with
+        for (int i = 1; i <= MaxHorizontalChain; i++)
         {
-            IsFalling = true,
-            CancelVerticalMotion = false,
-            CancelHorizontalMotion = false
-        };
+            int checkX = origin.X + (i * direction);
+            
+            if (!chunk.IsInBounds(checkX, origin.Y))
+                break;
+                
+            PixelElement checkPixel = chunk.pixels[checkX, origin.Y];
+            
+            // Check if the pixel is scaffolding
+            if (checkPixel != null && checkPixel.Type == PixelType.Scaffolding && checkPixel.Behaviour is ScaffoldingBehaviour scaffolding)
+            {
+                chainCount++;
+                
+                // Check if this scaffolding pixel has another scaffolding pixel below it and is vertically stable
+                PixelElement belowCheckPixel = null;
+                if (chunk.IsInBounds(checkX, origin.Y + 1))
+                {
+                    belowCheckPixel = chunk.pixels[checkX, origin.Y + 1];
+                }
+                
+                if (scaffolding.IsVerticalStable &&
+                    (belowCheckPixel == null ||
+                     belowCheckPixel.Type == PixelType.Scaffolding ||
+                     belowCheckPixel.Type == PixelType.Solid))
+                {
+                    foundStable = true;
+                    break;
+                }
+            }
+            else
+            {
+                // Not scaffolding, stop checking
+                break;
+            }
+        }
+        
+        return (foundStable, chainCount);
+    }
+
+    /// <summary>
+    /// Checks vertical stability by looking down for scaffolding chains and solid support
+    /// </summary>
+    /// <param name="origin">Starting position</param>
+    /// <param name="chunk">The pixel chunk</param>
+    /// <returns>True if vertical stability is found</returns>
+    private bool CheckVerticalStability(Vector2I origin, PixelChunk chunk)
+    {
+        CurrentVerticalChain = 0;
+        
+        for (int i = 1; i <= MaxVerticalChain; i++)
+        {
+            if (!chunk.IsInBounds(origin.X, origin.Y + i))
+                break;
+                
+            PixelElement checkPixel = chunk.pixels[origin.X, origin.Y + i];
+            
+            if (checkPixel != null && checkPixel.Type == PixelType.Scaffolding)
+            {
+                CurrentVerticalChain++;
+                
+                if (checkPixel.Behaviour is ScaffoldingBehaviour scaffolding && scaffolding.IsAnchor)
+                {
+                    return true;
+                }
+            }
+            else if (checkPixel != null && checkPixel.Type == PixelType.Solid)
+            {
+                return true;
+            }
+            else
+            {
+                break;
+            }
+        }
+        
+        return false;
     }
 }
