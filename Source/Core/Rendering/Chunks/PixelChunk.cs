@@ -393,15 +393,8 @@ public partial class PixelChunk : Node2D
                 {
                     maxVerticalChain = scaffolding.MaxVerticalChain,
                     maxHorizontalChain = scaffolding.MaxHorizontalChain,
-                    currentVerticalChain = scaffolding.CurrentVerticalChain,
-                    currentHorizontalChain = scaffolding.CurrentHorizontalChain,
                     isVerticalStable = scaffolding.IsVerticalStable,
                     isHorizontalStable = scaffolding.IsHorizontalStable,
-                    chainUtilization = new
-                    {
-                        verticalPercentage = scaffolding.MaxVerticalChain > 0 ? (double)scaffolding.CurrentVerticalChain / scaffolding.MaxVerticalChain * 100 : 0,
-                        horizontalPercentage = scaffolding.MaxHorizontalChain > 0 ? (double)scaffolding.CurrentHorizontalChain / scaffolding.MaxHorizontalChain * 100 : 0
-                    }
                 }
             };
             
@@ -435,15 +428,8 @@ public partial class PixelChunk : Node2D
             {
                 maxVerticalChain = scaffolding.MaxVerticalChain,
                 maxHorizontalChain = scaffolding.MaxHorizontalChain,
-                currentVerticalChain = scaffolding.CurrentVerticalChain,
-                currentHorizontalChain = scaffolding.CurrentHorizontalChain,
                 isVerticalStable = scaffolding.IsVerticalStable,
                 isHorizontalStable = scaffolding.IsHorizontalStable,
-                chainUtilization = new
-                {
-                    verticalPercentage = scaffolding.MaxVerticalChain > 0 ? (double)scaffolding.CurrentVerticalChain / scaffolding.MaxVerticalChain * 100 : 0,
-                    horizontalPercentage = scaffolding.MaxHorizontalChain > 0 ? (double)scaffolding.CurrentHorizontalChain / scaffolding.MaxHorizontalChain * 100 : 0
-                }
             };
         }
         
