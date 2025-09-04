@@ -13,18 +13,11 @@ using System.Text.Json;
 
 namespace SharpDiggingDwarfs.Core.Rendering.Chunks;
 
-public partial class PixelChunk : Node2D
+public class PixelChunk 
 {
-    [ExportGroup("parameters")]
-    [Export]
-    public Vector2I Size = new Vector2I(32, 18);
-    
-    private Image image;
-    private Vector2I mousePos;
-    private Vector2 viewPortSize;
-    
-    private Sprite2D sprite;
-    private StaticBody2D staticBody;
+    public PixelWorld ParentWorld;
+    public Vector2I Location;
+    public Vector2I Size;
     
     // pdg = PixelDataGrid
     public PixelElement[,] pixels;
@@ -32,128 +25,19 @@ public partial class PixelChunk : Node2D
     //public List<(Vector2I current, Vector2I next)> Swaps;
     private ConcurrentBag<(Vector2I, Vector2I)> Swaps = new ConcurrentBag<(Vector2I, Vector2I)>();
 
-    // !!! BRUSH NODE SYSTEM !!!
-    private BrushNode brushNode;
     
-    public override void _Ready()
+    public PixelChunk(PixelWorld parentWorld, Vector2I location, Vector2I size)
     {
-        sprite     = new Sprite2D();
-        staticBody = new StaticBody2D();
-        
-        AddChild(sprite);
-        sprite.AddChild(staticBody);
+        ParentWorld = parentWorld;
+        Location = location;
+        Size = size;
 
-        image  = new Image();
-        image  = Image.CreateEmpty(Size.X, Size.Y, false, Image.Format.Rgba8);
-        pixels = new PixelElement[Size.X, Size.Y];
-        
-        viewPortSize = GetViewport().GetVisibleRect().Size;
-        float width  = (int)viewPortSize.X / image.GetWidth();
-        float height = (int)viewPortSize.Y / image.GetHeight();
-        Scale        = new Vector2(width, height);
-        Position     = new Vector2(viewPortSize.X / 2, viewPortSize.Y / 2);
+        pixels = new PixelElement[size.X, size.Y];
 
         InitPixels();
-        InitImage();
-        
-        // Initialize the brush node system
-        SetupBrushNode();
+        // Note: InitPixels() will be called after Size is set
     }
 
-
-    private void SetupBrushNode()
-    {
-        // Load the brush node scene
-        var brushScene = GD.Load<PackedScene>("res://Resources/Scenes/BrushNode.tscn");
-        brushNode = brushScene.Instantiate<BrushNode>();
-        
-        // Configure the brush node
-        brushNode.SetChunkSize(Size);
-        
-        // Connect signals
-        brushNode.PaintRequested += OnBrushPaintRequested;
-        brushNode.EraseRequested += OnBrushEraseRequested;
-        brushNode.BrushChanged += OnBrushChanged;
-        
-        // Add as child
-        AddChild(brushNode);
-    }
-    
-    private void OnBrushPaintRequested(Vector2I position, int pixelTypeIndex)
-    {
-        if (IsInBounds(position.X, position.Y))
-        {
-            var pixel = brushNode.GetPixelByIndex(pixelTypeIndex);
-            SetPixel(position.X, position.Y, pixel);
-
-            GD.Print(pixelTypeIndex);
-            if (pixelTypeIndex == 0)
-            {
-                pixel.ExecuteSurroundingPixel(position, this, (adjacentPixel, pos) =>
-                {
-                    adjacentPixel.Physics = adjacentPixel.Physics with { CancelHorizontalMotion = false, CancelVerticalMotion = false };
-                });
-            }
-        }
-    }
-    
-    private void OnBrushEraseRequested(Vector2I position)
-    {
-        if (IsInBounds(position.X, position.Y))
-        {
-            SetPixel(position.X, position.Y, PixelFactory.CreateAir());
-        }
-    }
-    
-    private void OnBrushChanged(string brushName, int size, string pixelType)
-    {
-        // Optional: Handle brush change events (e.g., update UI)
-        GD.Print($"Brush changed: {brushName}, Size: {size}, Type: {pixelType}");
-    }
-
-    public override void _Input(InputEvent @event)
-    {
-        if (@event is InputEventMouseMotion eventMouseMotion)
-        {
-            // get the chunk mouse position
-            Vector2 scale = new Vector2(viewPortSize.X / Size.X, viewPortSize.Y / Size.Y);
-            Vector2 rawMouse = (Vector2)eventMouseMotion.Position;
-            
-            mousePos = new Vector2I((int)(rawMouse.X / scale.X), (int)(rawMouse.Y / scale.Y));
-        }
-
-        if (Godot.Input.IsKeyPressed(Key.Enter))
-        {
-            RefreshFrame();
-        }
-        
-        // Debug: Print brush info when Tab is pressed
-        if (Godot.Input.IsActionJustPressed("ui_focus_next")) // Tab key
-        {
-            if (brushNode != null)
-            {
-                GD.Print(brushNode.GetBrushInfo());
-            }
-        }
-        
-        // Debug: Print pixel data when "d" is pressed
-        if (Godot.Input.IsActionJustPressed("ui_accept") || Godot.Input.IsKeyPressed(Key.D))
-        {
-            PrintPixelDataAtMouse();
-        }
-    }
-
-    //public override void _Process(double delta)
-    //{
-    //    base._Process(delta);
-    //    RefreshFrame();
-    //}
-
-    public override void _PhysicsProcess(double delta)
-    {
-        RefreshFrame();
-    }
-    
 
     private void RefreshFrame()
     {
@@ -259,11 +143,9 @@ public partial class PixelChunk : Node2D
             }
         }
 
-        // Refresh the sprite texture
-        sprite.Texture = ImageTexture.CreateFromImage(image);
     }
 
-    private void InitPixels()
+    public void InitPixels()
     {
         for (int x = 0; x < Size.X; x++)
         {
@@ -272,19 +154,6 @@ public partial class PixelChunk : Node2D
                 pixels[x, y] = PixelFactory.CreateAir();
             }
         }
-    }
-
-    private void InitImage()
-    {
-        image.Fill(PixelFactory.CreateAir().Color);
-        for (int x = 0; x < Size.X; x++)
-        {
-            for (int y = 0; y < Size.Y; y++)
-            {
-                image.SetPixel(x,y,pixels[x, y].Color);
-            }
-        }
-        sprite.Texture = ImageTexture.CreateFromImage(image);
     }
 
     public void SwapPixels((Vector2I current, Vector2I next) swap)
@@ -300,9 +169,6 @@ public partial class PixelChunk : Node2D
         
         pixels[c_x, c_y] = t_nxt_pix;
         pixels[n_x, n_y] = t_cur_pix;
-       
-        image.SetPixel(c_x, c_y, t_nxt_pix.Color);
-        image.SetPixel(n_x, n_y, t_cur_pix.Color);
     }
 
     public void SetPixel(int x, int y, PixelElement pix)
@@ -311,128 +177,10 @@ public partial class PixelChunk : Node2D
         
         pix.SetRandomColor();
         pixels[x, y] = pix;
-        image.SetPixel(x,y,pix.Color);
     }
 
     public bool IsInBounds(int x, int y)
     {
         return x >= 0 && x < Size.X && y >= 0 && y < Size.Y;
-    }
-/// <summary>
-    /// Test method to validate composition integration with existing chunk system
-    /// This demonstrates how composed pixels can work alongside the current system
-    /// </summary>
-    public void TestCompositionIntegration()
-    {
-        GD.Print("=== Testing Composition Integration with PixelChunk ===");
-        
-        // Run the basic composition tests
-        // CompositionProofOfConcept.RunBasicTests(); // Removed - test class not available
-        
-        // Test creating composed pixels
-        var composedSolid = PixelFactory.CreateSolid();
-        var composedAir = PixelFactory.CreateAir();
-        
-        // Test that composed pixels have the expected properties
-        GD.Print($"Composed solid - Type: {composedSolid.Type}, Mass: {composedSolid.Physics.Mass}");
-        GD.Print($"Composed air - Type: {composedAir.Type}, Mass: {composedAir.Physics.Mass}");
-        
-        // Test IsEmpty logic between composed pixels
-        bool airEmptyForSolid = composedAir.IsEmpty(composedSolid);
-        bool solidEmptyForAir = composedSolid.IsEmpty(composedAir);
-        
-        GD.Print($"Air empty for solid: {airEmptyForSolid} (should be true)");
-        GD.Print($"Solid empty for air: {solidEmptyForAir} (should be false)");
-        
-        // Test behavior assignment
-        bool solidHasBehavior = composedSolid.Behaviour != null;
-        bool airHasBehavior = composedAir.Behaviour != null;
-        
-        GD.Print($"Solid has movement behavior: {solidHasBehavior} (should be true)");
-        GD.Print($"Air has movement behavior: {airHasBehavior} (should be false)");
-        
-        // Test GetSwapPosition delegation
-        var testOrigin = new Vector2I(10, 10);
-        var swapResult = composedSolid.GetSwapPosition(testOrigin, this);
-        
-        GD.Print($"GetSwapPosition test - Origin: {testOrigin}, Result: {swapResult}");
-        
-        GD.Print("✓ Composition integration test completed successfully");
-        GD.Print("=== Integration test finished ===");
-    }
-    
-    /// <summary>
-    /// Prints detailed pixel data at the current mouse position to the console
-    /// </summary>
-    private void PrintPixelDataAtMouse()
-    {
-        // Check if mouse position is within bounds
-        if (!IsInBounds(mousePos.X, mousePos.Y))
-        {
-            GD.Print($"[Pixel Inspector] Mouse position ({mousePos.X}, {mousePos.Y}) is out of bounds");
-            return;
-        }
-        
-        // Get the pixel at mouse position
-        PixelElement pixel = pixels[mousePos.X, mousePos.Y];
-        if (pixel == null)
-        {
-            GD.Print($"[Pixel Inspector] No pixel data at position ({mousePos.X}, {mousePos.Y})");
-            return;
-        }
-        
-        // Check if this is a scaffolding pixel
-        if (pixel.Behaviour is ScaffoldingBehaviour scaffolding)
-        {
-            // Create scaffolding-only data object
-            var scaffoldingData = new
-            {
-                position = new { x = mousePos.X, y = mousePos.Y },
-                type = pixel.Type.ToString(),
-                scaffolding = new
-                {
-                    maxVerticalChain = scaffolding.MaxVerticalChain,
-                    maxHorizontalChain = scaffolding.MaxHorizontalChain,
-                    isVerticalStable = scaffolding.IsVerticalStable,
-                    isHorizontalStable = scaffolding.IsHorizontalStable,
-                }
-            };
-            
-            // Convert to JSON with pretty formatting
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true,
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            };
-            
-            string jsonOutput = JsonSerializer.Serialize(scaffoldingData, options);
-            
-            GD.Print("=== SCAFFOLDING DATA JSON ===");
-            GD.Print(jsonOutput);
-            GD.Print("=== END SCAFFOLDING DATA ===");
-        }
-        else
-        {
-            GD.Print($"[Pixel Inspector] Pixel at ({mousePos.X}, {mousePos.Y}) is not a scaffolding pixel (Type: {pixel.Type})");
-        }
-    }
-    
-    /// <summary>
-    /// Extracts scaffolding-specific data if the pixel has scaffolding behavior
-    /// </summary>
-    private object GetScaffoldingData(PixelElement pixel)
-    {
-        if (pixel.Behaviour is ScaffoldingBehaviour scaffolding)
-        {
-            return new
-            {
-                maxVerticalChain = scaffolding.MaxVerticalChain,
-                maxHorizontalChain = scaffolding.MaxHorizontalChain,
-                isVerticalStable = scaffolding.IsVerticalStable,
-                isHorizontalStable = scaffolding.IsHorizontalStable,
-            };
-        }
-        
-        return null; // Not a scaffolding pixel
     }
 }
