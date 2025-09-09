@@ -17,7 +17,7 @@ public partial class PixelChunk : Node2D
 {
     [ExportGroup("parameters")]
     [Export]
-    public Vector2I Size = new Vector2I(32, 18);
+    public Vector2I Size = new Vector2I(32,32);
     
     private Image image;
     private Vector2I mousePos;
@@ -50,7 +50,7 @@ public partial class PixelChunk : Node2D
         viewPortSize = GetViewport().GetVisibleRect().Size;
         float width  = (int)viewPortSize.X / image.GetWidth();
         float height = (int)viewPortSize.Y / image.GetHeight();
-        Scale        = new Vector2(width, height);
+        Scale        = new Vector2(height, height);
         Position     = new Vector2(viewPortSize.X / 2, viewPortSize.Y / 2);
 
         InitPixels();
