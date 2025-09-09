@@ -38,7 +38,7 @@ public class ScaffoldingBehaviour : IPixelBehaviour
         return !IsVerticalStable || !IsHorizontalStable;
     }
 
-    public (Vector2I Current, Vector2I Next) GetSwapPosition(Vector2I origin, PixelChunk chunk, PixelElement pixel)
+    public (Vector2I Current, Vector2I Next) GetSwapPosition(Vector2I origin, PixelChunk chunk, PixelElement pixel, PixelWorld pixelWorld)
     {
         // Initialize pixel references to null to avoid unassigned variable errors
         PixelElement belowPixel = null;
@@ -55,9 +55,26 @@ public class ScaffoldingBehaviour : IPixelBehaviour
         // Check if this pixel has a SOLID or out of bounds below it - makes it an Anchor Pixel
         if (belowPixel == null || belowPixel.Type == PixelType.Solid || !chunk.IsInBounds(origin.X, origin.Y + 1))
         {
-            IsAnchor = true;
-            IsVerticalStable = true;
-            return (origin, origin);
+            // For out-of-bounds positions, check if there's solid support in the world
+            if (!chunk.IsInBounds(origin.X, origin.Y + 1))
+            {
+                Vector2I worldOrigin = pixelWorld.ChunkToWorldCoordinate(origin, chunk);
+                Vector2I worldBelowPos = worldOrigin + new Vector2I(0, 1);
+                var worldPixel = pixelWorld.GetPixelAtWorldCoordinate(worldBelowPos);
+                
+                if (worldPixel != null && worldPixel.Type == PixelType.Solid)
+                {
+                    IsAnchor = true;
+                    IsVerticalStable = true;
+                    return (origin, origin);
+                }
+            }
+            else
+            {
+                IsAnchor = true;
+                IsVerticalStable = true;
+                return (origin, origin);
+            }
         }
 
         // Check if this pixel lands on top of an anchor pixel or vertically stable pixel
@@ -94,11 +111,22 @@ public class ScaffoldingBehaviour : IPixelBehaviour
         // If no other options are available, fall down
         Vector2I fallPosition = new Vector2I(origin.X, origin.Y + 1);
         
-        // Check if we can fall
+        // Check if we can fall within current chunk
         if (chunk.IsInBounds(fallPosition.X, fallPosition.Y))
         {
             PixelElement targetPixel = chunk.pixels[fallPosition.X, fallPosition.Y];
             if (targetPixel != null && targetPixel.IsEmpty(pixel))
+            {
+                return (origin, fallPosition);
+            }
+        }
+        else
+        {
+            // Position is out of current chunk bounds, check using PixelWorld
+            Vector2I worldOrigin = pixelWorld.ChunkToWorldCoordinate(origin, chunk);
+            Vector2I worldFallPos = worldOrigin + new Vector2I(0, 1);
+            
+            if (pixelWorld.CanMoveToWorldPosition(worldFallPos, pixel))
             {
                 return (origin, fallPosition);
             }

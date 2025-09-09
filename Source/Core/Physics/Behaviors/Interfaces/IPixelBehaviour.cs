@@ -21,8 +21,9 @@ public interface IPixelBehaviour
     /// <param name="origin">Current position of the pixel</param>
     /// <param name="chunk">The pixel chunk containing the simulation state</param>
     /// <param name="pixel">The pixel element that is moving</param>
+    /// <param name="pixelWorld">The pixel world for cross-chunk operations</param>
     /// <returns>A tuple containing the current position and the desired next position</returns>
-    (Vector2I Current, Vector2I Next) GetSwapPosition(Vector2I origin, PixelChunk chunk, PixelElement pixel);
+    (Vector2I Current, Vector2I Next) GetSwapPosition(Vector2I origin, PixelChunk chunk, PixelElement pixel, PixelWorld pixelWorld);
     
     /// <summary>
     /// Determines if the pixel should be falling based on its current state and enforcers

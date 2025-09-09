@@ -13,7 +13,7 @@ using System.Text.Json;
 
 namespace SharpDiggingDwarfs.Core.Rendering.Chunks;
 
-public class PixelChunk 
+public partial class PixelChunk : Node2D
 {
     public PixelWorld ParentWorld;
     public Vector2I Location;
@@ -22,9 +22,17 @@ public class PixelChunk
     // pdg = PixelDataGrid
     public PixelElement[,] pixels;
 
+    // Rendering components
+    private Image chunkImage;
+    private Sprite2D chunkSprite;
+    
     //public List<(Vector2I current, Vector2I next)> Swaps;
     private ConcurrentBag<(Vector2I, Vector2I)> Swaps = new ConcurrentBag<(Vector2I, Vector2I)>();
 
+    public bool IsActive = true;
+    public bool IsDirty = true; // Track if chunk needs visual update
+    public bool ForceUpdate = false; // Force update even if not dirty
+    public bool BorderStateChanged = true; // Track if border state changed
     
     public PixelChunk(PixelWorld parentWorld, Vector2I location, Vector2I size)
     {
@@ -33,116 +41,68 @@ public class PixelChunk
         Size = size;
 
         pixels = new PixelElement[size.X, size.Y];
+        
+        // Initialize rendering components
+        chunkImage = Image.CreateEmpty(size.X, size.Y, false, Image.Format.Rgba8);
+        chunkSprite = new Sprite2D();
+        
+        // Set up sprite properties
+        chunkSprite.Texture = ImageTexture.CreateFromImage(chunkImage);
 
         InitPixels();
         // Note: InitPixels() will be called after Size is set
     }
 
 
-    private void RefreshFrame()
+    /// <summary>
+    /// Calculates swap positions for all pixels in this chunk and returns them as chunk coordinates
+    /// </summary>
+    /// <returns>List of swap pairs in chunk coordinates</returns>
+    public List<(Vector2I current, Vector2I next)> CalculateSwapPositions()
     {
-        Swaps.Clear();
+        var swaps = new ConcurrentBag<(Vector2I, Vector2I)>();
 
-        // Parallelize the outer loop
-        Parallel.For(0, Size.X, x =>
+        // Use single Parallel.For for better performance - avoid nested parallelism
+        // Use thread-local storage to reduce locking overhead
+        Parallel.For(0, Size.X * Size.Y, index =>
         {
-            Parallel.For(0, Size.Y, y =>
-            {
-                PixelElement pixelElement = pixels[x, y];
-                if (pixelElement == null) return;
-                (Vector2I current, Vector2I next) = pixelElement.GetSwapPosition(new Vector2I(x, y), this);
-                if (current == next) return;
-                Swaps.Add((current, next));
-            });
+            int x = index % Size.X;
+            int y = index / Size.X;
+
+            PixelElement pixelElement = pixels[x, y];
+            if (pixelElement == null) return;
+            
+            // Get swap position in chunk coordinates
+            Vector2I chunkPos = new Vector2I(x, y);
+            (Vector2I current, Vector2I next) = pixelElement.GetSwapPosition(chunkPos, this, ParentWorld);
+            if (current == next) return;
+
+            swaps.Add((current, next));
         });
 
-        // Process swaps with collision handling
-        ProcessSwaps();
+        return swaps.ToList();
     }
 
-    private void ProcessSwaps()
+    /// <summary>
+    /// Swaps pixels within this chunk using chunk-local coordinates
+    /// </summary>
+    /// <param name="swap">Swap pair in chunk-local coordinates</param>
+    public void SwapPixelsLocal((Vector2I current, Vector2I next) swap)
     {
-        // Track which positions are being targeted
-        var targetPositions = new HashSet<Vector2I>();
-        var processedSwaps = new List<(Vector2I, Vector2I)>();
-        var conflictSwaps = new List<(Vector2I, Vector2I)>();
-        var rng = new Random();
+        int c_x = swap.current.X;
+        int c_y = swap.current.Y;
+        int n_x = swap.next.X;
+        int n_y = swap.next.Y;
 
-        // First pass: identify conflicts
-        foreach (var swap in Swaps.OrderBy(x => rng.Next()))
-        {
-            if (targetPositions.Add(swap.Item2))  // Item2 is the next position
-            {
-                // No conflict, add to processed swaps
-                processedSwaps.Add(swap);
-            }
-            else
-            {
-                // Conflict detected, add to conflict list
-                conflictSwaps.Add(swap);
-            }
-        }
-
-        // Apply non-conflicting swaps
-        foreach (var swap in processedSwaps)
-        {
-            SwapPixels(swap);
-        }
-
-        // Handle conflicts in batches until no more conflicts
-        while (conflictSwaps.Count > 0)
-        {
-            var currentConflicts = conflictSwaps;
-            conflictSwaps = new List<(Vector2I, Vector2I)>();
-            targetPositions.Clear();
-
-            // Re-run GetSwapPosition for conflicting pixels
-            foreach (var conflict in currentConflicts)
-            {
-                PixelElement pixel = pixels[conflict.Item1.X, conflict.Item1.Y];  // Item1 is the current position
-                if (pixel == null) continue;
-
-                // Get new target position
-                var newSwap = pixel.GetSwapPosition(conflict.Item1, this);
+        // Bounds check for chunk coordinates
+        if (!IsInBounds(c_x, c_y) || !IsInBounds(n_x, n_y)) return;
                 
-                if (newSwap.Item1 == newSwap.Item2)  // If current == next
-                {
-                    // Pixel can't move, skip it
-                    continue;
-                }
-
-                if (targetPositions.Add(newSwap.Item2))  // Add next position
-                {
-                    // No conflict with new position, process it
-                    SwapPixels(newSwap);
-                }
-                else
-                {
-                    // Still has conflict, add to next batch
-                    conflictSwaps.Add(newSwap);
-                }
-            }
-
-            // If we have the same number of conflicts as before, we might have a deadlock
-            // In this case, randomly resolve some conflicts
-            if (conflictSwaps.Count >= currentConflicts.Count)
-            {
-                var remainingConflicts = conflictSwaps
-                    .OrderBy(x => rng.Next())
-                    .Take(conflictSwaps.Count / 2)
-                    .ToList();
-
-                foreach (var swap in remainingConflicts)
-                {
-                    SwapPixels(swap);
-                }
-
-                conflictSwaps = conflictSwaps
-                    .Except(remainingConflicts)
-                    .ToList();
-            }
-        }
-
+        // Swaps positions in the grid
+        PixelElement t_cur_pix = pixels[c_x, c_y].Clone();
+        PixelElement t_nxt_pix = pixels[n_x, n_y].Clone();
+        
+        pixels[c_x, c_y] = t_nxt_pix;
+        pixels[n_x, n_y] = t_cur_pix;
     }
 
     public void InitPixels()
@@ -152,8 +112,13 @@ public class PixelChunk
             for (int y = 0; y < Size.Y; y++)
             {
                 pixels[x, y] = PixelFactory.CreateAir();
+                // Update the chunk image with the initial pixel color
+                chunkImage.SetPixel(x, y, pixels[x, y].Color);
             }
         }
+        
+        // Update the sprite texture after initializing all pixels
+        chunkSprite.Texture = ImageTexture.CreateFromImage(chunkImage);
     }
 
     public void SwapPixels((Vector2I current, Vector2I next) swap)
@@ -177,10 +142,61 @@ public class PixelChunk
         
         pix.SetRandomColor();
         pixels[x, y] = pix;
+        
+        // Update the chunk image immediately
+        chunkImage.SetPixel(x, y, pix.Color);
+        chunkSprite.Texture = ImageTexture.CreateFromImage(chunkImage);
+        
+        // Mark as dirty for potential physics updates
+        IsDirty = true;
     }
 
     public bool IsInBounds(int x, int y)
     {
         return x >= 0 && x < Size.X && y >= 0 && y < Size.Y;
     }
+    
+    /// <summary>
+    /// Updates the visual representation of this chunk
+    /// </summary>
+    public void UpdateVisuals()
+    {
+        if (!IsDirty && !ForceUpdate) return;
+        
+        // Update all pixels in the chunk image
+        for (int x = 0; x < Size.X; x++)
+        {
+            for (int y = 0; y < Size.Y; y++)
+            {
+                if (pixels[x, y] != null)
+                {
+                    chunkImage.SetPixel(x, y, pixels[x, y].Color);
+                }
+            }
+        }
+        
+        // Update the sprite texture
+        chunkSprite.Texture = ImageTexture.CreateFromImage(chunkImage);
+        
+        // Reset flags
+        IsDirty = false;
+        ForceUpdate = false;
+    }
+    
+    /// <summary>
+    /// Gets the sprite for this chunk
+    /// </summary>
+    public Sprite2D GetSprite()
+    {
+        return chunkSprite;
+    }
+    
+    /// <summary>
+    /// Gets the world position of this chunk
+    /// </summary>
+    public Vector2 GetWorldPosition()
+    {
+        return new Vector2(Location.X * Size.X, Location.Y * Size.Y);
+    }
+    
 }

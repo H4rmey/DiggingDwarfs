@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Sharp Digging Dwarfs"
-run/main_scene="uid://br1do28s30k2g"
+run/main_scene="uid://gtf8qqmf3181"
 config/features=PackedStringArray("4.4", "C#", "Forward Plus")
 config/icon="res://Resources/Textures/icon.svg"
 

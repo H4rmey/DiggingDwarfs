@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://gtf8qqmf3181"]
+
+[ext_resource type="Script" uid="uid://bo5kq1612e3bx" path="res://Source/Core/Rendering/PixelWorld.cs" id="1_eorr3"]
+
+[node name="PixelWorld" type="Node2D"]
+script = ExtResource("1_eorr3")

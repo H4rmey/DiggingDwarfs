@@ -49,9 +49,9 @@ public class PixelElement
         return element.Physics.Mass > Physics.Mass;
     }
     
-    public virtual (Vector2I Current, Vector2I Next) GetSwapPosition(Vector2I origin, PixelChunk chunk)
+    public virtual (Vector2I Current, Vector2I Next) GetSwapPosition(Vector2I origin, PixelChunk chunk, PixelWorld pixelWorld)
     {
-        return Behaviour?.GetSwapPosition(origin, chunk, this) ?? (origin, origin);
+        return Behaviour?.GetSwapPosition(origin, chunk, this, pixelWorld) ?? (origin, origin);
     }
 
     public virtual void SetRandomColor()
@@ -154,6 +154,58 @@ public class PixelElement
                 break;
             }
             
+        }
+
+        // Return the first valid position found, or origin if none found
+        return (origin, firstValidPosition ?? origin);
+    }
+
+    public (Vector2I Current, Vector2I Next) FindNextPixelPositionWorld(Vector2I origin, List<Vector2I> coords, PixelChunk chunk, Vector2I direction, PixelWorld pixelWorld, int randomRangeOffset = 10)
+    {
+        // Store the first valid empty position we find
+        Vector2I? firstValidPosition = null;
+
+        foreach (Vector2I coord in coords)
+        {
+            Vector2I targetPos = origin + coord * direction;
+
+            // Check if position is within current chunk bounds
+            if (chunk.IsInBounds(targetPos.X, targetPos.Y))
+            {
+                var pixel = chunk.pixels[targetPos.X, targetPos.Y];
+
+                // exit on the first empty pixel that we find
+                if (pixel.IsEmpty(this))
+                {
+                    firstValidPosition = targetPos;
+                    break;
+                }
+                else if (pixel.Type != PixelType.Liquid)
+                {
+                    break;
+                }
+            }
+            else
+            {
+                // Position is out of current chunk bounds, check using PixelWorld
+                Vector2I worldOrigin = pixelWorld.ChunkToWorldCoordinate(origin, chunk);
+                Vector2I worldTargetPos = worldOrigin + coord * direction;
+                
+                if (pixelWorld.CanMoveToWorldPosition(worldTargetPos, this))
+                {
+                    firstValidPosition = targetPos;
+                    break;
+                }
+                else
+                {
+                    // If we hit a non-liquid pixel in another chunk, stop searching
+                    var worldPixel = pixelWorld.GetPixelAtWorldCoordinate(worldTargetPos);
+                    if (worldPixel != null && worldPixel.Type != PixelType.Liquid)
+                    {
+                        break;
+                    }
+                }
+            }
         }
 
         // Return the first valid position found, or origin if none found
