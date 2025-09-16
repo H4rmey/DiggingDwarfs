@@ -1,6 +1,6 @@
-[gd_scene load_steps=2 format=3 uid="uid://br1do28s30k2g"]
+[gd_scene load_steps=2 format=3 uid="uid://r4rspe7menge"]
 
-[ext_resource type="Script" uid="uid://c5oqxyg5a1w7w" path="res://Source/Core/Rendering/Chunks/PixelChunk.cs" id="1_ysuo6"]
+[ext_resource type="Script" uid="uid://c5oqxyg5a1w7w" path="res://Source/Core/Rendering/Chunks/PixelChunk.cs" id="1_ljn56"]
 
 [node name="PixelChunk" type="Node2D"]
-script = ExtResource("1_ysuo6")
+script = ExtResource("1_ljn56")

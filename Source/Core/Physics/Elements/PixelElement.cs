@@ -49,9 +49,9 @@ public class PixelElement
         return element.Physics.Mass > Physics.Mass;
     }
     
-    public virtual (Vector2I Current, Vector2I Next) GetSwapPosition(Vector2I origin, PixelChunk chunk)
+    public virtual (Vector2I Current, Vector2I Next) GetSwapPosition(PixelWorld world, PixelChunk chunk, Vector2I origin)
     {
-        return Behaviour?.GetSwapPosition(origin, chunk, this) ?? (origin, origin);
+        return Behaviour?.GetSwapPosition(world, chunk, this, origin) ?? (origin, origin);
     }
 
     public virtual void SetRandomColor()
@@ -81,7 +81,7 @@ public class PixelElement
             Vector2I checkPos = origin + offset;
             
             // Skip if position is out of bounds
-            if (!chunk.IsInBounds(checkPos.X, checkPos.Y))
+            if (!chunk.IsInBound(checkPos))
                 continue;
 
             // Get the pixel at this position - for proof-of-concept, skip type checking
@@ -114,7 +114,7 @@ public class PixelElement
             Vector2I checkPos = origin + offset;
             
             // Skip if position is out of bounds
-            if (!chunk.IsInBounds(checkPos.X, checkPos.Y))
+            if (!chunk.IsInBound(checkPos))
                 continue;
 
             // Get the pixel at this position - for proof-of-concept, skip type checking
@@ -137,7 +137,7 @@ public class PixelElement
             Vector2I targetPos = origin + coord * direction;
 
             // Skip if position is out of bounds
-            if (!chunk.IsInBounds(targetPos.X, targetPos.Y))
+            if (!chunk.IsInBound(targetPos))
                 continue;
 
             var pixel = chunk.pixels[targetPos.X, targetPos.Y];

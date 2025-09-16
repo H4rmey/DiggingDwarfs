@@ -39,7 +39,7 @@ public class LiquidBehaviour : IPixelBehaviour
     /// <param name="chunk">The pixel chunk containing the pixel</param>
     /// <param name="pixel">The pixel element being processed</param>
     /// <returns>A tuple with (Current position, Next position)</returns>
-    public (Vector2I Current, Vector2I Next) GetSwapPosition(Vector2I origin, PixelChunk chunk, PixelElement pixel)
+    public (Vector2I Current, Vector2I Next) GetSwapPosition(PixelWorld world, PixelChunk chunk, PixelElement pixel, Vector2I origin)
     {
         // If a pixel is falling, ensure vertical motion is allowed
         // This is the complement to the IsFalling/CancelHorizontalMotion relationship:
@@ -54,7 +54,7 @@ public class LiquidBehaviour : IPixelBehaviour
         int y = origin.Y;
 
         // First check the pixel below (primary gravity-based movement)
-        if (chunk.IsInBounds(origin.X, origin.Y + 1))
+        if (chunk.IsInBound(new Vector2I(origin.X, origin.Y + 1)))
         {
             var belowPixel = chunk.pixels[origin.X, origin.Y + 1];
             if (belowPixel.IsEmpty(pixel))

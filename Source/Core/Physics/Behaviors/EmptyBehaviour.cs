@@ -28,7 +28,7 @@ public class EmptyBehaviour : IPixelBehaviour
         return false;
     }
 
-    public (Vector2I Current, Vector2I Next) GetSwapPosition(Vector2I origin, PixelChunk chunk, PixelElement pixel)
+    public (Vector2I Current, Vector2I Next) GetSwapPosition(PixelWorld world, PixelChunk chunk, PixelElement pixel, Vector2I origin)
     {
         // Empty pixels never move
         return (origin, origin);
