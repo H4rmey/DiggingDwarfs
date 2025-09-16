@@ -1,17 +1,17 @@
-using System;
-using System.Diagnostics;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Threading.Tasks;
+using Color = Godot.Color;
 using Godot;
-using SharpDiggingDwarfs.Core.Rendering.Chunks;
 using SharpDiggingDwarfs.Core.Input.Brushes;
 using SharpDiggingDwarfs.Core.Physics.Elements;
 using SharpDiggingDwarfs.Core.Physics.Factory;
+using SharpDiggingDwarfs.Core.Rendering.Chunks;
 using SharpDiggingDwarfs.Source.Core.Input;
-using Color = Godot.Color;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Drawing;
+using System.Linq;
+using System.Threading.Tasks;
+using System;
 
 public partial class PixelWorld : Node2D
 {
@@ -29,17 +29,15 @@ public partial class PixelWorld : Node2D
 
     private BrushNode brushNode;
     
-    //TODO: start temp code
-    private Image image;
-    private Sprite2D sprite;
-    //TODO: end temp code
-    
     public override void _Ready()
     {
         base._Ready();
 
         //Position = new Vector2(0, -10);
         WindowSize   = GetViewport().GetVisibleRect().Size;
+        WorldSize    = new Vector2I(ChunkSize.X * ChunkCount.X, ChunkSize.Y * ChunkCount.Y);
+        PixelSize    = new Vector2(WindowSize.X / WorldSize.X, WindowSize.Y / WorldSize.Y);
+        //ChunkScale   = new Vector2(PixelSize.X / ChunkCount.X, PixelSize.Y / ChunkCount.Y);
         
         // set the camera
         PackedScene cameraScene = GD.Load<PackedScene>("res://Resources/Scenes/Cam.tscn");
@@ -47,29 +45,16 @@ public partial class PixelWorld : Node2D
         Cam.world = this;
         Cam.ZoomChanged += ZoomChangedEventHandler;
         Cam.OffsetChanged += OffsetChangedEventHandler;
+        Cam.Offset = new Vector2(180, 300);
+        Cam.Zoom = new Vector2(3,3);
         
         AddChild(Cam);
         
-        WorldSize    = new Vector2I(ChunkSize.X * ChunkCount.X, ChunkSize.Y * ChunkCount.Y);
-        PixelSize   = new Vector2(WindowSize.X / WorldSize.X, WindowSize.Y / WorldSize.Y);
-        ChunkScale   = new Vector2(PixelSize.X / ChunkCount.X, PixelSize.Y / ChunkCount.Y);
         
 
         Chunks = new PixelChunk[ChunkCount.X, ChunkCount.Y];
         ActiveChunks = new HashSet<PixelChunk>();
         
-        
-        //TODO: start temp code
-        sprite = new Sprite2D();
-        image  = new Image();
-        image  = Image.CreateEmpty(WorldSize.X, WorldSize.Y, false, Image.Format.Rgba8);
-        image.Fill(Colors.Transparent);
-        sprite.Scale = PixelSize;
-        sprite.Position = new Vector2(WindowSize.X / 2, WindowSize.Y / 2);
-        sprite.Texture = ImageTexture.CreateFromImage(image);
-        //TODO: end temp code
-        
-
         for (int x = 0; x < ChunkCount.X; x++)
         {
             for (int y = 0; y < ChunkCount.Y; y++)
@@ -80,24 +65,23 @@ public partial class PixelWorld : Node2D
                 chunk.Size = ChunkSize;
                 
                 // place the chunk in the correct position
-                float pos_x = (WindowSize.X / ChunkCount.X * x) + (WindowSize.X / ChunkCount.X)/2;
-                float pos_y = (WindowSize.Y / ChunkCount.Y * y) + (WindowSize.Y / ChunkCount.Y)/2; 
+                float pos_x = (ChunkSize.X * x) + ChunkSize.X / 2;
+                float pos_y = (ChunkSize.Y * y) + ChunkSize.Y / 2; 
                 chunk.Position = new Vector2(pos_x, pos_y);
-                chunk.Scale = PixelSize;
+                //chunk.Scale = PixelSize;
                 chunk.WorldPosition = new Vector2I(x, y);
                 chunk.ParentWorld = this;
                 chunk.IsActive = false;
-                DEBUG_RenderChunkBorder(chunk, new Color(1,0,0,0.25f));
+                //DEBUG_RenderChunkBorder(chunk, new Color(1,0,0,0.25f));
                 
                 // place the chunk in the world
                 AddChild(chunk);
+                chunk.DEBUG_DrawBorder(new Color(1,0,0,0.25f));
                 Chunks[x, y] = chunk;
             }
         }
 
         InitBrush();
-        
-        AddChild(sprite);
     }
 
     public override void _PhysicsProcess(double delta)
@@ -135,37 +119,26 @@ public partial class PixelWorld : Node2D
         stopwatch.Stop();
         //GD.Print($"SetImagesForChunks Time: {stopwatch.ElapsedMilliseconds} ms");
     }
- 
-    
     
     private List<(Vector2I, Vector2I)> GetSwaps()
     {
-        ConcurrentBag<(Vector2I, Vector2I)> swaps = new();
-        HashSet<Vector2I> seenTargets = new();
-        object lockObj = new();
+        List<(Vector2I, Vector2I)> swaps = new();
 
-        Parallel.ForEach(ActiveChunks, chunk =>
+        foreach (PixelChunk chunk in ActiveChunks)
         {
-            var t_swap = chunk.GetSwapPositions();
-            if (t_swap.Count == 0)
+            List<(Vector2I, Vector2I)> swap = chunk.GetSwapPositions();
+            if (swap.Count == 0)
             {
                 ActiveChunks.Remove(chunk);
                 chunk.IsActive = false;
-                DEBUG_RenderChunkBorder(chunk, new Color(1, 0, 0, 0.25f));
-                return;
+                chunk.DEBUG_DrawBorder(new Color(1, 0, 0, 0.25f));
+                continue;
             }
 
-            foreach (var swap in t_swap)
-            {
-                lock (lockObj)
-                {
-                    if (seenTargets.Add(swap.Item2))
-                        swaps.Add(swap);
-                }
-            }
-        });
+            swaps.AddRange(swap);
+        }
 
-        return swaps.ToList();
+        return swaps;
     }
     
     private void ProcessSwaps(List<(Vector2I, Vector2I)> swaps)
@@ -224,11 +197,13 @@ public partial class PixelWorld : Node2D
         AddChild(brushNode);
 
         brushNode.PaintRequested += PaintRequestedEventHandler;
+        brushNode.EraseRequested += EraseRequestedEventHandler;
     }
 
     private void ZoomChangedEventHandler(Vector2 zoom)
     {
-        PixelSize = PixelSize * zoom;
+        //PixelSize = (WindowSize / (Vector2)WorldSize) * Cam.Zoom;
+        //PixelSize    = new Vector2(WindowSize.X / WorldSize.X, WindowSize.Y / WorldSize.Y);
     }
     
     private void OffsetChangedEventHandler(Vector2 offset)
@@ -236,11 +211,9 @@ public partial class PixelWorld : Node2D
         
     }
 
-    private void PaintRequestedEventHandler(Vector2I pos, int pixelTypeIndex)
+    private void EraseRequestedEventHandler(Vector2I pos, int size)
     {
-        Vector2 c = CamToWorld(pos);
-        int size = 6;
-        pos = ViewPortToWorld(pos);
+        pos = CamToWorld(pos);
         // Generate all positions within the circle
         for (int x = -size; x <= size; x++)
         {
@@ -251,7 +224,26 @@ public partial class PixelWorld : Node2D
                 if (distance <= size)
                 {
                     Vector2I p = new Vector2I(pos.X + x, pos.Y +  y);
-                    SetPixelElementAt(p, PixelFactory.CreateSolid());
+                    SetPixelElementAt(p, PixelFactory.CreateAir());
+                }
+            }
+        }
+    }
+
+    private void PaintRequestedEventHandler(Vector2I pos, int pixelTypeIndex, int size)
+    {
+        pos = CamToWorld(pos);
+        // Generate all positions within the circle
+        for (int x = -size; x <= size; x++)
+        {
+            for (int y = -size; y <= size; y++)
+            {
+                // Check if the position is within the circle using distance formula
+                float distance = Mathf.Sqrt(x * x + y * y);
+                if (distance <= size)
+                {
+                    Vector2I p = new Vector2I(pos.X + x, pos.Y +  y);
+                    SetPixelElementAt(p, brushNode.pixels[pixelTypeIndex]);
                 }
             }
         }
@@ -259,15 +251,7 @@ public partial class PixelWorld : Node2D
     
     public Vector2I CamToWorld(Vector2 screenPos)
     {
-        // Convert screen position to world position considering camera offset and zoom
-        Vector2 adjustedPos = (screenPos - Cam.Offset) / Cam.Zoom;
-
-        // Scale to world pixel coordinates
-        int worldX = (int)(adjustedPos.X / PixelSize.X);
-        int worldY = (int)(adjustedPos.Y / PixelSize.Y);
-
-        Vector2I result =new Vector2I(worldX + (int)Cam.Offset.X/(int)PixelSize.Y, worldY + (int)Cam.Offset.Y/(int)PixelSize.Y);
-        return result;
+        return new Vector2I((int)screenPos.X, (int)screenPos.Y);
     }
 
     public Vector2I ViewPortToWorld(Vector2I pos)
@@ -304,9 +288,29 @@ public partial class PixelWorld : Node2D
     // this functions expects a coordinate in the world not in the viewport
     public void SetPixelElementAt(Vector2I pos, PixelElement pixel)
     {
+        if ( !IsInBound(pos)) { return; }
+        
         PixelChunk chunk = GetChunkFrom(pos);
         chunk.IsActive = true;
         ActiveChunks.Add(chunk);
+        
+        int x = chunk.WorldPosition.X;
+        int y = chunk.WorldPosition.Y;
+
+        int maxX = Chunks.GetLength(0);
+        int maxY = Chunks.GetLength(1);
+
+        // Check above
+        if (y - 1 >= 0 && Chunks[x, y - 1] != null)
+        {
+            ActiveChunks.Add(Chunks[x, y - 1]);
+        }
+
+        // Check below
+        if (y + 1 < maxY && Chunks[x, y + 1] != null)
+        {
+            ActiveChunks.Add(Chunks[x, y + 1]);
+        }
         
         chunk.SetPixel(new Vector2I( pos.X % ChunkSize.X, pos.Y % ChunkSize.Y), pixel);
     }
@@ -344,24 +348,7 @@ public partial class PixelWorld : Node2D
         // Only color the border of active chunks
         foreach (PixelChunk chunk in ActiveChunks)
         {
-            DEBUG_RenderChunkBorder(chunk, color);
-        }
-        sprite.Texture = ImageTexture.CreateFromImage(image);
-    }
-
-    private void DEBUG_RenderChunkBorder(PixelChunk chunk, Color color)
-    {
-        for (int x = 0; x < ChunkSize.X; x++)
-        {
-            for (int y = 0; y < ChunkSize.Y; y++)
-            {
-                Vector2I pos = chunk.ToWorldPosition(new Vector2I(x, y));
-
-                if (x == 0 || y == 0 || x == ChunkSize.X - 1 || y == ChunkSize.Y - 1)
-                {
-                    image.SetPixel(pos.X, pos.Y, color); // Blue for active border
-                }
-            }
+            chunk.DEBUG_DrawBorder(color);
         }
     }
 }

@@ -50,13 +50,13 @@ public class LiquidBehaviour : IPixelBehaviour
         // If vertical motion is canceled, the pixel stays in place
         if (pixel.Physics.CancelVerticalMotion) return (origin, origin);
 
-        int x = origin.X;
-        int y = origin.Y;
-
-        // First check the pixel below (primary gravity-based movement)
-        if (chunk.IsInBound(new Vector2I(origin.X, origin.Y + 1)))
+        origin = chunk.ToWorldPosition(origin);
+        Vector2I nextPos = new Vector2I(origin.X, origin.Y + 1);
+        
+        // 1. Check if you can place a pixel directly below
+        if (world.IsInBound(nextPos))
         {
-            var belowPixel = chunk.pixels[origin.X, origin.Y + 1];
+            PixelElement belowPixel = world.GetPixelElementAt(nextPos);
             if (belowPixel.IsEmpty(pixel))
             {
                 // Calculate momentum as the pixel falls downward
@@ -69,7 +69,7 @@ public class LiquidBehaviour : IPixelBehaviour
 
         // If can't move directly down, calculate how the liquid should flow laterally
         // Apply flow physics to the liquid (handles spread patterns and momentum)
-        pixel.Physics.ApplyFlow(pixel, origin, chunk);
+        pixel.Physics.ApplyFlow(world, chunk, pixel, origin);
 
         // Check if the pixel should stop moving (based on physics thresholds like friction)
         // This simulates how real liquids can stop flowing in certain conditions
@@ -91,12 +91,12 @@ public class LiquidBehaviour : IPixelBehaviour
         Vector2I direction = doLeftFirst ? Vector2I.Left : Vector2I.Right;
         
         // Try to find a valid position in the first chosen direction
-        var (Current, Next) = pixel.FindNextPixelPosition(origin, coords, chunk, direction);
+        var (Current, Next) = pixel.FindNextPixelPosition(world, chunk, origin, coords, direction, 6);
         if (Current != Next) return (Current, Next); // Return immediately if a valid move is found
         
         // If first direction fails, try the opposite direction
         direction = !doLeftFirst ? Vector2I.Left : Vector2I.Right;
-        (Current, Next) = pixel.FindNextPixelPosition(origin, coords, chunk, direction);
+        (Current, Next) = pixel.FindNextPixelPosition(world, chunk, origin, coords, direction, 6);
         
         // Return final result - if no movement is possible, Current and Next will be the same
         return (Current, Next);

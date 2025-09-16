@@ -40,7 +40,6 @@ public class SolidBehaviour : IPixelBehaviour
         if (pixel.Physics.CancelVerticalMotion) return (origin, origin);
         //if (pixel.Physics.DoCancelVerticalMotion(pixel, pixel.Physics.VerticalStability)) return (origin, origin);
 
-
         origin = chunk.ToWorldPosition(origin);
         Vector2I nextPos = new Vector2I(origin.X, origin.Y + 1);
         
@@ -56,14 +55,14 @@ public class SolidBehaviour : IPixelBehaviour
                 // TODO: make it so the IsFalling is only set based on a calculation with mass, momentum and friction.
                 belowPixel.Physics = belowPixel.Physics with { IsFalling = true, CancelVerticalMotion = false };
 
-                //// when a pixel falls down next to a another pixel it has a chance to "drag" the other pixel with it
-                //pixel.ExecuteSurroundingPixel(origin, chunk, (adjacentPixel, pos) =>
-                //{
-                //    if (GD.RandRange(0.0f, 1.0f) < pixel.Physics.HorizontalStability)
-                //    {
-                //        adjacentPixel.Physics = adjacentPixel.Physics with { CancelHorizontalMotion = false, CancelVerticalMotion = false };
-                //    }
-                //});
+                // when a pixel falls down next to a another pixel it has a chance to "drag" the other pixel with it
+                pixel.ExecuteSurroundingPixel(world, chunk, origin, (adjacentPixel, pos) =>
+                {
+                    if (GD.RandRange(0.0f, 1.0f) < pixel.Physics.HorizontalStability)
+                    {
+                        adjacentPixel.Physics = adjacentPixel.Physics with { CancelHorizontalMotion = false, CancelVerticalMotion = false };
+                    }
+                });
 
                 // finally apply the new momentum 
                 pixel.Physics.ApplyMomentum(pixel);

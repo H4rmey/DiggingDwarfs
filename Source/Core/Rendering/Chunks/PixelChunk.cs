@@ -29,16 +29,20 @@ public partial class PixelChunk : Node2D
     // pdg = PixelDataGrid
     public PixelElement[,] pixels;
 
-    public List<(Vector2I, Vector2I)> Swaps = new List<(Vector2I, Vector2I)>();
+    public List<(Vector2I, Vector2I)> Swaps = new();
     
     public bool IsActive = true;
+    
+    public bool Debug = true;
+    public Image debugImage;
+    public Sprite2D debugSprite;
     
     public override void _Ready()
     {
         staticBody = new StaticBody2D();
-        sprite = new Sprite2D();
-        image  = new Image();
-        pixels = new PixelElement[Size.X, Size.Y];
+        sprite     = new Sprite2D();
+        image      = new Image();
+        pixels     = new PixelElement[Size.X, Size.Y];
         
         AddChild(sprite);
         sprite.AddChild(staticBody);
@@ -49,6 +53,7 @@ public partial class PixelChunk : Node2D
 
         InitPixels();
         InitImage();
+        DEBUG_init();
     }
     
     public List<(Vector2I, Vector2I)> GetSwapPositions()
@@ -112,5 +117,31 @@ public partial class PixelChunk : Node2D
     public bool IsInBound(Vector2I pos)
     {
         return pos.X >= 0 && pos.X < Size.X && pos.Y >= 0 && pos.Y < Size.Y;
+    }
+
+    private void DEBUG_init()
+    {
+        debugSprite = new Sprite2D();
+        debugImage  = new Image();
+        
+        debugImage = Image.CreateEmpty(Size.X, Size.Y, false, Image.Format.Rgba8);
+        debugImage.Fill(Colors.Transparent);
+        debugSprite.Texture = ImageTexture.CreateFromImage(debugImage);
+        AddChild(debugSprite);
+    }
+
+    public void DEBUG_DrawBorder(Color color)
+    {
+        for (int x = 0; x < debugImage.GetSize().X; x++)
+        {
+            for (int y = 0; y < debugImage.GetSize().Y; y++)
+            {
+                if (x == 0 || y == 0 || x == Size.X - 1 || y == Size.Y - 1)
+                {
+                    debugImage.SetPixel(x, y, color);
+                }
+            }
+        }
+        debugSprite.Texture = ImageTexture.CreateFromImage(debugImage);
     }
 }

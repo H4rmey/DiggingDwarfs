@@ -65,7 +65,7 @@ public class PixelElement
         return clone;
     }
 
-    public virtual void ExecuteTopBottomLeftRight(Vector2I origin, PixelChunk chunk, PixelAction action)
+    public virtual void ExecuteTopBottomLeftRight(PixelWorld world, PixelChunk chunk, Vector2I origin, PixelAction action)
     {
         // Define all 8 surrounding positions (including diagonals)
         Vector2I[] surroundingPositions = new Vector2I[]
@@ -85,7 +85,7 @@ public class PixelElement
                 continue;
 
             // Get the pixel at this position - for proof-of-concept, skip type checking
-            var pixel = chunk.pixels[checkPos.X, checkPos.Y];
+            PixelElement pixel = world.GetPixelElementAt(checkPos);
             if (pixel != null)
             {
                 // Invoke the action on the found pixel
@@ -94,7 +94,7 @@ public class PixelElement
         }
     }
 
-    public virtual void ExecuteSurroundingPixel(Vector2I origin, PixelChunk chunk, PixelAction action)
+    public virtual void ExecuteSurroundingPixel(PixelWorld world, PixelChunk chunk, Vector2I origin, PixelAction action)
     {
         // Define all 8 surrounding positions (including diagonals)
         Vector2I[] surroundingPositions = new Vector2I[]
@@ -118,7 +118,7 @@ public class PixelElement
                 continue;
 
             // Get the pixel at this position - for proof-of-concept, skip type checking
-            var pixel = chunk.pixels[checkPos.X, checkPos.Y];
+            PixelElement pixel = world.GetPixelElementAt(checkPos);
             if (pixel != null)
             {
                 // Invoke the action on the found pixel
@@ -127,20 +127,23 @@ public class PixelElement
         }
     }
     
-    public (Vector2I Current, Vector2I Next) FindNextPixelPosition(Vector2I origin, List<Vector2I> coords, PixelChunk chunk, Vector2I direction, int randomRangeOffset = 10)
+    public (Vector2I Current, Vector2I Next) FindNextPixelPosition(PixelWorld world, PixelChunk chunk, Vector2I origin, List<Vector2I> coords, Vector2I direction, int randomRangeOffset = 10)
     {
         // Store the first valid empty position we find
         Vector2I? firstValidPosition = null;
+        
+        origin = chunk.ToWorldPosition(origin);
+        Vector2I nextPos = new Vector2I(origin.X, origin.Y + 1);
 
         foreach (Vector2I coord in coords)
         {
             Vector2I targetPos = origin + coord * direction;
 
             // Skip if position is out of bounds
-            if (!chunk.IsInBound(targetPos))
+            if (!world.IsInBound(targetPos))
                 continue;
 
-            var pixel = chunk.pixels[targetPos.X, targetPos.Y];
+            PixelElement pixel = world.GetPixelElementAt(targetPos);
 
             // exit on the first empty pixel that we find
 

@@ -159,7 +159,8 @@ public struct PhysicsHelper
 
     public bool DoCancelHorizontalMotion(PixelElement pixel, float stability)
     {
-        if (GD.RandRange(0.0f, 1.0f) < stability)
+        double k = GD.RandRange(0.0f, 1.0f);
+        if (k < stability)
         {
             pixel.Physics = pixel.Physics with
             {
@@ -190,7 +191,7 @@ public struct PhysicsHelper
     /// <param name="pixel">The pixel to apply flow to</param>
     /// <param name="origin">Current position</param>
     /// <param name="chunk">The chunk containing the pixel</param>
-    public void ApplyFlow(PixelElement pixel, Vector2I origin, PixelChunk chunk)
+    public void ApplyFlow(PixelWorld world, PixelChunk chunk, PixelElement pixel, Vector2I origin)
     {
         if (this.Viscosity > 0)
         {
@@ -198,7 +199,7 @@ public struct PhysicsHelper
             float horizontalFriction = this.HorizontalStability;
             
             // Trigger surrounding pixels to potentially start flowing
-            pixel.ExecuteSurroundingPixel(origin, chunk, (adjacentPixel, pos) => {
+            pixel.ExecuteSurroundingPixel(world, chunk, origin, (adjacentPixel, pos) => {
                 if (GD.RandRange(0.0f, 1.0f) < horizontalFriction)
                 {
                     adjacentPixel.Physics = adjacentPixel.Physics with { CancelHorizontalMotion = false };
