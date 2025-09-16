@@ -266,7 +266,8 @@ public partial class PixelWorld : Node2D
         int worldX = (int)(adjustedPos.X / PixelSize.X);
         int worldY = (int)(adjustedPos.Y / PixelSize.Y);
 
-        return new Vector2I(worldX, worldY);
+        Vector2I result =new Vector2I(worldX + (int)Cam.Offset.X/(int)PixelSize.Y, worldY + (int)Cam.Offset.Y/(int)PixelSize.Y);
+        return result;
     }
 
     public Vector2I ViewPortToWorld(Vector2I pos)
