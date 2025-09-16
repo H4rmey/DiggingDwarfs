@@ -4,4 +4,7 @@
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <RootNamespace>SharpDiggingDwarfs</RootNamespace>
   </PropertyGroup>
+  <ItemGroup>
+    <Folder Include="Resources\Scenes\" />
+  </ItemGroup>
 </Project>

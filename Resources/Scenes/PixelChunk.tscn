@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://r4rspe7menge"]
+[gd_scene load_steps=2 format=3 uid="uid://ckx6xffa0d1ub"]
 
 [ext_resource type="Script" uid="uid://c5oqxyg5a1w7w" path="res://Source/Core/Rendering/Chunks/PixelChunk.cs" id="1_ljn56"]
 

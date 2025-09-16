@@ -3,24 +3,29 @@ using System.Diagnostics;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
+using System.Threading.Tasks;
 using Godot;
 using SharpDiggingDwarfs.Core.Rendering.Chunks;
 using SharpDiggingDwarfs.Core.Input.Brushes;
 using SharpDiggingDwarfs.Core.Physics.Elements;
 using SharpDiggingDwarfs.Core.Physics.Factory;
+using SharpDiggingDwarfs.Source.Core.Input;
 using Color = Godot.Color;
 
 public partial class PixelWorld : Node2D
 {
     public PixelChunk[,] Chunks;
     public HashSet<PixelChunk> ActiveChunks;
-    public Vector2I ChunkCount = new Vector2I(20, 20);
+    public Vector2I ChunkCount = new Vector2I(10, 10);
     public Vector2I ChunkSize = new Vector2I(64, 36);
 
-    public Vector2I WorldSize;
-    public Vector2  WorldScale;
+    public Vector2I WorldSize;      // the amount of pixel-element the world is
+    public Vector2  PixelSize;     
     public Vector2  ChunkScale;
-    public Vector2  ViewPortSize;
+    public Vector2  WindowSize;
+
+    public Cam Cam;
 
     private BrushNode brushNode;
     
@@ -34,11 +39,21 @@ public partial class PixelWorld : Node2D
         base._Ready();
 
         //Position = new Vector2(0, -10);
-
-        ViewPortSize = GetViewport().GetVisibleRect().Size;
+        WindowSize   = GetViewport().GetVisibleRect().Size;
+        
+        // set the camera
+        PackedScene cameraScene = GD.Load<PackedScene>("res://Resources/Scenes/Cam.tscn");
+        Cam = cameraScene.Instantiate<Cam>();
+        Cam.world = this;
+        Cam.ZoomChanged += ZoomChangedEventHandler;
+        Cam.OffsetChanged += OffsetChangedEventHandler;
+        
+        AddChild(Cam);
+        
         WorldSize    = new Vector2I(ChunkSize.X * ChunkCount.X, ChunkSize.Y * ChunkCount.Y);
-        WorldScale   = new Vector2(ViewPortSize.X / WorldSize.X, ViewPortSize.Y / WorldSize.Y);
-        ChunkScale   = new Vector2(WorldScale.X / ChunkCount.X, WorldScale.Y / ChunkCount.Y);
+        PixelSize   = new Vector2(WindowSize.X / WorldSize.X, WindowSize.Y / WorldSize.Y);
+        ChunkScale   = new Vector2(PixelSize.X / ChunkCount.X, PixelSize.Y / ChunkCount.Y);
+        
 
         Chunks = new PixelChunk[ChunkCount.X, ChunkCount.Y];
         ActiveChunks = new HashSet<PixelChunk>();
@@ -49,8 +64,8 @@ public partial class PixelWorld : Node2D
         image  = new Image();
         image  = Image.CreateEmpty(WorldSize.X, WorldSize.Y, false, Image.Format.Rgba8);
         image.Fill(Colors.Transparent);
-        sprite.Scale = WorldScale;
-        sprite.Position = new Vector2(ViewPortSize.X / 2, ViewPortSize.Y / 2);
+        sprite.Scale = PixelSize;
+        sprite.Position = new Vector2(WindowSize.X / 2, WindowSize.Y / 2);
         sprite.Texture = ImageTexture.CreateFromImage(image);
         //TODO: end temp code
         
@@ -65,10 +80,10 @@ public partial class PixelWorld : Node2D
                 chunk.Size = ChunkSize;
                 
                 // place the chunk in the correct position
-                float pos_x = (ViewPortSize.X / ChunkCount.X * x) + (ViewPortSize.X / ChunkCount.X)/2;
-                float pos_y = (ViewPortSize.Y / ChunkCount.Y * y) + (ViewPortSize.Y / ChunkCount.Y)/2; 
+                float pos_x = (WindowSize.X / ChunkCount.X * x) + (WindowSize.X / ChunkCount.X)/2;
+                float pos_y = (WindowSize.Y / ChunkCount.Y * y) + (WindowSize.Y / ChunkCount.Y)/2; 
                 chunk.Position = new Vector2(pos_x, pos_y);
-                chunk.Scale = WorldScale;
+                chunk.Scale = PixelSize;
                 chunk.WorldPosition = new Vector2I(x, y);
                 chunk.ParentWorld = this;
                 chunk.IsActive = false;
@@ -85,7 +100,6 @@ public partial class PixelWorld : Node2D
         AddChild(sprite);
     }
 
-
     public override void _PhysicsProcess(double delta)
     {
         base._PhysicsProcess(delta);
@@ -99,53 +113,59 @@ public partial class PixelWorld : Node2D
         stopwatch.Start();
         List<(Vector2I, Vector2I)> swaps = GetSwaps();
         stopwatch.Stop();
-        GD.Print($"GetSwaps Time: {stopwatch.ElapsedMilliseconds} ms");
+        //GD.Print($"GetSwaps Time: {stopwatch.ElapsedMilliseconds} ms");
 
-        GD.Print($"FPS: {Engine.GetFramesPerSecond()}");
-        GD.Print($"SWP: {swaps.Count}");
+        //GD.Print($"FPS: {Engine.GetFramesPerSecond()}");
+        //GD.Print($"SWP: {swaps.Count}");
 
         stopwatch.Restart();
         ProcessSwaps(swaps);
         stopwatch.Stop();
-        GD.Print($"ProcessSwaps Time: {stopwatch.ElapsedMilliseconds} ms");
+        //GD.Print($"ProcessSwaps Time: {stopwatch.ElapsedMilliseconds} ms");
 
         swaps.Clear();
 
         stopwatch.Restart();
         DEBUG_RenderActiveChunkBorders(new Color(0, 0, 1, 0.25f));
         stopwatch.Stop();
-        GD.Print($"DEBUG_RenderActiveChunkBorders Time: {stopwatch.ElapsedMilliseconds} ms");
+        //GD.Print($"DEBUG_RenderActiveChunkBorders Time: {stopwatch.ElapsedMilliseconds} ms");
 
         stopwatch.Restart();
         SetImagesForChunks();
         stopwatch.Stop();
-        GD.Print($"SetImagesForChunks Time: {stopwatch.ElapsedMilliseconds} ms");
+        //GD.Print($"SetImagesForChunks Time: {stopwatch.ElapsedMilliseconds} ms");
     }
  
     
     
     private List<(Vector2I, Vector2I)> GetSwaps()
     {
-        List<(Vector2I, Vector2I)> swaps = new List<(Vector2I, Vector2I)>();
-            
-        // get net positions
-        foreach (PixelChunk chunk in ActiveChunks)
-        {
-            List<(Vector2I, Vector2I)> t_swap = chunk.GetSwapPositions();
+        ConcurrentBag<(Vector2I, Vector2I)> swaps = new();
+        HashSet<Vector2I> seenTargets = new();
+        object lockObj = new();
 
+        Parallel.ForEach(ActiveChunks, chunk =>
+        {
+            var t_swap = chunk.GetSwapPositions();
             if (t_swap.Count == 0)
             {
-                chunk.IsActive = false;
                 ActiveChunks.Remove(chunk);
-                
-                DEBUG_RenderChunkBorder(chunk, new Color(1,0,0,0.25f));
-                continue;
+                chunk.IsActive = false;
+                DEBUG_RenderChunkBorder(chunk, new Color(1, 0, 0, 0.25f));
+                return;
             }
-            
-            swaps.AddRange(t_swap);
-        }
 
-        return swaps;
+            foreach (var swap in t_swap)
+            {
+                lock (lockObj)
+                {
+                    if (seenTargets.Add(swap.Item2))
+                        swaps.Add(swap);
+                }
+            }
+        });
+
+        return swaps.ToList();
     }
     
     private void ProcessSwaps(List<(Vector2I, Vector2I)> swaps)
@@ -206,8 +226,19 @@ public partial class PixelWorld : Node2D
         brushNode.PaintRequested += PaintRequestedEventHandler;
     }
 
+    private void ZoomChangedEventHandler(Vector2 zoom)
+    {
+        PixelSize = PixelSize * zoom;
+    }
+    
+    private void OffsetChangedEventHandler(Vector2 offset)
+    {
+        
+    }
+
     private void PaintRequestedEventHandler(Vector2I pos, int pixelTypeIndex)
     {
+        Vector2 c = CamToWorld(pos);
         int size = 6;
         pos = ViewPortToWorld(pos);
         // Generate all positions within the circle
@@ -225,10 +256,22 @@ public partial class PixelWorld : Node2D
             }
         }
     }
+    
+    public Vector2I CamToWorld(Vector2 screenPos)
+    {
+        // Convert screen position to world position considering camera offset and zoom
+        Vector2 adjustedPos = (screenPos - Cam.Offset) / Cam.Zoom;
+
+        // Scale to world pixel coordinates
+        int worldX = (int)(adjustedPos.X / PixelSize.X);
+        int worldY = (int)(adjustedPos.Y / PixelSize.Y);
+
+        return new Vector2I(worldX, worldY);
+    }
 
     public Vector2I ViewPortToWorld(Vector2I pos)
     {
-        return new Vector2I((int)(pos.X/ViewPortSize.X*WorldSize.X),(int)(pos.Y/ViewPortSize.Y*WorldSize.Y)); 
+        return new Vector2I((int)(pos.X/WindowSize.X*WorldSize.X),(int)(pos.Y/WindowSize.Y*WorldSize.Y)); 
     }
 
     // this functions expects a coordinate in the world not in the viewport

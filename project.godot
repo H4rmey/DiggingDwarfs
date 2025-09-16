@@ -11,9 +11,17 @@ config_version=5
 [application]
 
 config/name="Sharp Digging Dwarfs"
-run/main_scene="uid://bjas42sjiso5d"
+run/main_scene="uid://b1fkv3xj2f0a"
 config/features=PackedStringArray("4.4", "C#", "Forward Plus")
 config/icon="res://Resources/Textures/icon.svg"
+
+[display]
+
+window/size/viewport_width=320
+window/size/viewport_height=180
+window/size/initial_position_type=3
+window/size/window_width_override=1280
+window/size/window_height_override=720
 
 [dotnet]
 

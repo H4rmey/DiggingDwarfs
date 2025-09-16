@@ -48,8 +48,8 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
             previewImage = Image.CreateEmpty((int)ParentWorld.WorldSize.X, (int)ParentWorld.WorldSize.Y, false, Image.Format.Rgba8);
             previewImage.Fill(Colors.Transparent);
 
-            Scale = ParentWorld.WorldScale; 
-            Position = new Vector2(ParentWorld.ViewPortSize.X/2, ParentWorld.ViewPortSize.Y/2);
+            Scale = ParentWorld.PixelSize; 
+            Position = new Vector2(ParentWorld.WindowSize.X/2, ParentWorld.WindowSize.Y/2);
             
             AddChild(previewSprite);
             previewSprite.Texture = ImageTexture.CreateFromImage(previewImage);

@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://bvqxk8y7n8wqr"]
+[gd_scene load_steps=2 format=3 uid="uid://dpqqo0mjgsto5"]
 
 [ext_resource type="Script" uid="uid://dldfvo2c0bpya" path="res://Source/Core/Input/Brushes/BrushNode.cs" id="1_gigfj"]
 
