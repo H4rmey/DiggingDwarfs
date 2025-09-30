@@ -59,9 +59,9 @@ public partial class PixelChunk : Node2D
     public List<(Vector2I, Vector2I)> GetSwapPositions()
     {
         Swaps.Clear();
-        for (int x = 0; x < Size.X; x++)
+        for (int y = Size.Y-1; y >= 0; y--)
         {
-            for (int y = 0; y < Size.Y; y++)
+            for (int x = Size.X-1; x >= 0; x--)
             {
                 PixelElement pixelElement = pixels[x, y];
                 if (pixelElement == null) continue;

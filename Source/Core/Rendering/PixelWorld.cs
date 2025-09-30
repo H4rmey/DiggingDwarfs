@@ -17,8 +17,8 @@ public partial class PixelWorld : Node2D
 {
     public PixelChunk[,] Chunks;
     public HashSet<PixelChunk> ActiveChunks;
-    public Vector2I ChunkCount = new Vector2I(10, 10);
-    public Vector2I ChunkSize = new Vector2I(64, 36);
+    public Vector2I ChunkCount;
+    public Vector2I ChunkSize;
 
     public Vector2I WorldSize;      // the amount of pixel-element the world is
     public Vector2  PixelSize;     
@@ -28,10 +28,12 @@ public partial class PixelWorld : Node2D
     public Cam Cam;
 
     private BrushNode brushNode;
-    
+   
     public override void _Ready()
     {
         base._Ready();
+        ChunkCount = new Vector2I(2,2);
+        ChunkSize = new Vector2I(16*2, 9*2);
 
         //Position = new Vector2(0, -10);
         WindowSize   = GetViewport().GetVisibleRect().Size;
@@ -45,8 +47,8 @@ public partial class PixelWorld : Node2D
         Cam.world = this;
         Cam.ZoomChanged += ZoomChangedEventHandler;
         Cam.OffsetChanged += OffsetChangedEventHandler;
-        Cam.Offset = new Vector2(180, 300);
-        Cam.Zoom = new Vector2(3,3);
+        Cam.Offset = new Vector2(WorldSize.X/2, WorldSize.Y/2);
+        Cam.Zoom = PixelSize;
         
         AddChild(Cam);
         
@@ -150,7 +152,7 @@ public partial class PixelWorld : Node2D
         var rng = new Random();
 
         // First pass: identify conflicts
-        foreach (var swap in swaps)
+        foreach (var swap in swaps.OrderBy(x => rng.Next()))
         {
             if (targetPositions.Add(swap.Item2))  // Item2 is the next position
             {
@@ -214,6 +216,8 @@ public partial class PixelWorld : Node2D
     private void EraseRequestedEventHandler(Vector2I pos, int size)
     {
         pos = CamToWorld(pos);
+        PixelChunk chunk = GetChunkFrom(pos);
+        ActiveChunks.Add(chunk);
         // Generate all positions within the circle
         for (int x = -size; x <= size; x++)
         {
@@ -233,20 +237,25 @@ public partial class PixelWorld : Node2D
     private void PaintRequestedEventHandler(Vector2I pos, int pixelTypeIndex, int size)
     {
         pos = CamToWorld(pos);
+        
+        PixelChunk chunk = GetChunkFrom(pos);
+        ActiveChunks.Add(chunk);
+        
         // Generate all positions within the circle
-        for (int x = -size; x <= size; x++)
+        for (int x = size; x >= -size; x-=1)
         {
-            for (int y = -size; y <= size; y++)
+            for (int y = size; y >= -size; y-=1)
             {
                 // Check if the position is within the circle using distance formula
                 float distance = Mathf.Sqrt(x * x + y * y);
                 if (distance <= size)
                 {
                     Vector2I p = new Vector2I(pos.X + x, pos.Y +  y);
-                    SetPixelElementAt(p, brushNode.pixels[pixelTypeIndex]);
+                    SetPixelElementAt(p, brushNode.pixels[pixelTypeIndex].Clone());
                 }
             }
         }
+        SetImagesForChunks();
     }
     
     public Vector2I CamToWorld(Vector2 screenPos)
@@ -301,16 +310,17 @@ public partial class PixelWorld : Node2D
         int maxY = Chunks.GetLength(1);
 
         // Check above
-        if (y - 1 >= 0 && Chunks[x, y - 1] != null)
+        //if (y - 1 >= 0 && Chunks[x, y - 1] != null)
+        if (pos.Y % ChunkSize.Y == 0 && y  > 0 && Chunks[x, y - 1] != null)
         {
             ActiveChunks.Add(Chunks[x, y - 1]);
         }
 
         // Check below
-        if (y + 1 < maxY && Chunks[x, y + 1] != null)
-        {
-            ActiveChunks.Add(Chunks[x, y + 1]);
-        }
+        //if (y % ChunkSize.Y == 0 && y + 1 < maxY && Chunks[x, y + 1] != null)
+        //{
+        //    ActiveChunks.Add(Chunks[x, y + 1]);
+        //}
         
         chunk.SetPixel(new Vector2I( pos.X % ChunkSize.X, pos.Y % ChunkSize.Y), pixel);
     }
@@ -338,8 +348,8 @@ public partial class PixelWorld : Node2D
     {
         if (@event is InputEventKey keyEvent && keyEvent.Pressed && keyEvent.Keycode == Key.Enter)
         {
-            GD.Print("Enter was pressed!");
-            //RefreshFrame();
+            GD.Print("Rendering Next Frame!");
+            RefreshFrame();
         }
     }
 

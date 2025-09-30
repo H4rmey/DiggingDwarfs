@@ -40,20 +40,20 @@ public class ScaffoldingBehaviour : IPixelBehaviour
 
     public (Vector2I Current, Vector2I Next) GetSwapPosition(PixelWorld world, PixelChunk chunk, PixelElement pixel, Vector2I origin)
     {
+        origin = chunk.ToWorldPosition(origin);
+        Vector2I nextPos = new Vector2I(origin.X, origin.Y + 1);
+        
         // Initialize pixel references to null to avoid unassigned variable errors
         PixelElement belowPixel = null;
-        PixelElement topPixel = null;
-        PixelElement leftPixel = null;
-        PixelElement rightPixel = null;
-
-        // Get neighboring pixels within chunk bounds for stability calculations
-        if (chunk.IsInBound(new Vector2I(origin.X, origin.Y + 1))) { belowPixel = chunk.pixels[origin.X, origin.Y + 1]; }
-        if (chunk.IsInBound(new Vector2I(origin.X, origin.Y - 1))) { topPixel = chunk.pixels[origin.X, origin.Y - 1]; }
-        if (chunk.IsInBound(new Vector2I(origin.X - 1, origin.Y))) { leftPixel = chunk.pixels[origin.X - 1, origin.Y]; }
-        if (chunk.IsInBound(new Vector2I(origin.X + 1, origin.Y))) { rightPixel = chunk.pixels[origin.X + 1, origin.Y]; }
+        
+        // 1. Check if you can place a pixel directly below
+        if (world.IsInBound(nextPos))
+        {
+            belowPixel = world.GetPixelElementAt(nextPos);
+        }
 
         // Check if this pixel has a SOLID or out of bounds below it - makes it an Anchor Pixel
-        if (belowPixel == null || belowPixel.Type == PixelType.Solid || !chunk.IsInBound(new Vector2I(origin.X, origin.Y + 1)))
+        if (belowPixel == null || belowPixel.Type == PixelType.Solid || !world.IsInBound(nextPos))
         {
             IsAnchor = true;
             IsVerticalStable = true;
@@ -70,14 +70,14 @@ public class ScaffoldingBehaviour : IPixelBehaviour
             }
         }
 
-        if (CheckHorizontalStability(origin, chunk, -1))
+        if (CheckHorizontalStability(world, chunk, origin, -1))
         {
             IsHorizontalStable = true;
             IsVerticalStable = true;
             return (origin, origin);
         }
 
-        if (CheckHorizontalStability(origin, chunk, 1))
+        if (CheckHorizontalStability(world, chunk, origin, 1))
         {
             IsHorizontalStable = true;
             IsVerticalStable = true;
@@ -91,16 +91,13 @@ public class ScaffoldingBehaviour : IPixelBehaviour
         //    return (origin, origin);
         //}
 
-        // If no other options are available, fall down
-        Vector2I fallPosition = new Vector2I(origin.X, origin.Y + 1);
-        
         // Check if we can fall
-        if (chunk.IsInBound(fallPosition))
+        if (world.IsInBound(nextPos))
         {
-            PixelElement targetPixel = chunk.pixels[fallPosition.X, fallPosition.Y];
+            PixelElement targetPixel = world.GetPixelElementAt(nextPos);
             if (targetPixel != null && targetPixel.IsEmpty(pixel))
             {
-                return (origin, fallPosition);
+                return (origin, nextPos);
             }
         }
 
@@ -115,7 +112,7 @@ public class ScaffoldingBehaviour : IPixelBehaviour
     /// <param name="chunk">The pixel chunk</param>
     /// <param name="direction">Direction to check (-1 for left, 1 for right)</param>
     /// <returns>Tuple of (foundStable, chainCount)</returns>
-    private bool CheckHorizontalStability(Vector2I origin, PixelChunk chunk, int direction)
+    private bool CheckHorizontalStability(PixelWorld world, PixelChunk chunk, Vector2I origin, int direction)
     {
         bool foundStable = false;
         
@@ -123,19 +120,19 @@ public class ScaffoldingBehaviour : IPixelBehaviour
         {
             int checkX = origin.X + (i * direction);
             
-            if (!chunk.IsInBound(new Vector2I(checkX, origin.Y)))
+            if (!world.IsInBound(new Vector2I(checkX, origin.Y)))
                 break;
                 
-            PixelElement checkPixel = chunk.pixels[checkX, origin.Y];
+            PixelElement checkPixel = world.GetPixelElementAt(new Vector2I(checkX, origin.Y));
             
             // Check if the pixel is scaffolding
             if (checkPixel != null && checkPixel.Type == PixelType.Scaffolding && checkPixel.Behaviour is ScaffoldingBehaviour scaffolding)
             {
                 // Check if this scaffolding pixel has another scaffolding pixel below it and is vertically stable
                 PixelElement belowCheckPixel = null;
-                if (chunk.IsInBound(new Vector2I(checkX, origin.Y + 1)))
+                if (world.IsInBound(origin))
                 {
-                    belowCheckPixel = chunk.pixels[checkX, origin.Y + 1];
+                    belowCheckPixel = world.GetPixelElementAt(new Vector2I(checkX, origin.Y + 1));
                 }
                 
                 if (scaffolding.IsVerticalStable &&

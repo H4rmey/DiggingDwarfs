@@ -55,14 +55,14 @@ public class SolidBehaviour : IPixelBehaviour
                 // TODO: make it so the IsFalling is only set based on a calculation with mass, momentum and friction.
                 belowPixel.Physics = belowPixel.Physics with { IsFalling = true, CancelVerticalMotion = false };
 
-                // when a pixel falls down next to a another pixel it has a chance to "drag" the other pixel with it
-                pixel.ExecuteSurroundingPixel(world, chunk, origin, (adjacentPixel, pos) =>
-                {
-                    if (GD.RandRange(0.0f, 1.0f) < pixel.Physics.HorizontalStability)
-                    {
-                        adjacentPixel.Physics = adjacentPixel.Physics with { CancelHorizontalMotion = false, CancelVerticalMotion = false };
-                    }
-                });
+                //// when a pixel falls down next to a another pixel it has a chance to "drag" the other pixel with it
+                //pixel.ExecuteSurroundingPixel(world, chunk, origin, (adjacentPixel, pos) =>
+                //{
+                //    if (GD.RandRange(0.0f, 1.0f) < pixel.Physics.HorizontalStability)
+                //    {
+                //        adjacentPixel.Physics = adjacentPixel.Physics with { CancelHorizontalMotion = false, CancelVerticalMotion = false };
+                //    }
+                //});
 
                 // finally apply the new momentum 
                 pixel.Physics.ApplyMomentum(pixel);
@@ -84,8 +84,8 @@ public class SolidBehaviour : IPixelBehaviour
 
         // Randomly choose which diagonal to try first
         bool tryLeftFirst = GD.RandRange(0, 1) == 0;
-        Vector2I firstDirection = tryLeftFirst ? new Vector2I(-1, 1) : new Vector2I(1, 1);
-        Vector2I secondDirection = tryLeftFirst ? new Vector2I(1, 1) : new Vector2I(-1, 1);
+        Vector2I secondDirection = tryLeftFirst ? new Vector2I(-1, 1) : new Vector2I(1, 1);
+        Vector2I firstDirection = tryLeftFirst ? new Vector2I(1, 1) : new Vector2I(-1, 1);
 
 
         // Try first diagonal direction
@@ -138,7 +138,7 @@ public class SolidBehaviour : IPixelBehaviour
             if (world.IsInBound(targetPos))
             {
                 PixelElement targetPixel = world.GetPixelElementAt(targetPos);
-                if (targetPixel.IsEmpty(pixel))
+                if (targetPixel.IsEmpty(pixel) && ! targetPixel.Physics.IsFalling)
                 {
                     // Decrease momentum by the HorizontalFriction. 
                     // TODO: resolve if HorizontalFriction is the correct variable to use or if we should use another one

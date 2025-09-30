@@ -37,8 +37,8 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
         private Sprite2D previewSprite;
 
         private Vector2 mousePos;
-        private int brushSize = 6;
-        private int pixelType = 1;
+        private int brushSize = 0;
+        private int pixelType = 2;
         
         private bool isPaintHeldDown = false;
         private bool isEraseHeldDown = false;
@@ -57,7 +57,7 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
             previewImage = Image.CreateEmpty((int)ParentWorld.WorldSize.X, (int)ParentWorld.WorldSize.Y, false, Image.Format.Rgba8);
             previewImage.Fill(Colors.Transparent);
 
-            Position = new Vector2(ParentWorld.WindowSize.X/4, ParentWorld.WindowSize.Y/4);
+            Position = new Vector2(ParentWorld.WindowSize.X/(ParentWorld.PixelSize.X*2), ParentWorld.WindowSize.Y/(ParentWorld.PixelSize.Y*2));
             
             AddChild(previewSprite);
             previewSprite.Texture = ImageTexture.CreateFromImage(previewImage);
@@ -103,6 +103,7 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
             if (Godot.Input.IsMouseButtonPressed(MouseButton.Left))
             {
                 isPaintHeldDown = true;
+                EmitSignal(SignalName.PaintRequested, mousePos, pixelType, brushSize);
             }
             
             if (!Godot.Input.IsMouseButtonPressed(MouseButton.Right))

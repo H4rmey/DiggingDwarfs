@@ -13,6 +13,7 @@ namespace SharpDiggingDwarfs.Core.Physics.Behaviors;
 /// </summary>
 public class LiquidBehaviour : IPixelBehaviour
 {
+    private int maxCheckTimes = 5000;
     public void InitializePhysics(PixelElement pixel)
     {
         pixel.Physics = PhysicsHelper.Liquid;
@@ -39,6 +40,8 @@ public class LiquidBehaviour : IPixelBehaviour
     /// <param name="chunk">The pixel chunk containing the pixel</param>
     /// <param name="pixel">The pixel element being processed</param>
     /// <returns>A tuple with (Current position, Next position)</returns>
+    /// TODO: Water currently keeps chunks active, i should change it so it when a pixel has attempted about 10 positions it will stop looking or something like that
+    /// active chunks cost compute power
     public (Vector2I Current, Vector2I Next) GetSwapPosition(PixelWorld world, PixelChunk chunk, PixelElement pixel, Vector2I origin)
     {
         // If a pixel is falling, ensure vertical motion is allowed
@@ -61,12 +64,12 @@ public class LiquidBehaviour : IPixelBehaviour
             {
                 // Calculate momentum as the pixel falls downward
                 pixel.Physics.ApplyMomentum(pixel);
-                return (origin, new Vector2I(origin.X, origin.Y + 1));
+                return (origin, nextPos);
             }
         }
 
         if (pixel.Physics.CancelVerticalMotion) return (origin, origin);
-
+        
         // If can't move directly down, calculate how the liquid should flow laterally
         // Apply flow physics to the liquid (handles spread patterns and momentum)
         pixel.Physics.ApplyFlow(world, chunk, pixel, origin);

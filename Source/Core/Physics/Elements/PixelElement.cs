@@ -127,12 +127,14 @@ public class PixelElement
         }
     }
     
+    // This function expects that the origin passed has already been converted to the worldposition beforehand by calling chunk.ToWorldPosition
+    // TODO: Figure out if this is the way to go or let the function convert it to worldposition
     public (Vector2I Current, Vector2I Next) FindNextPixelPosition(PixelWorld world, PixelChunk chunk, Vector2I origin, List<Vector2I> coords, Vector2I direction, int randomRangeOffset = 10)
     {
         // Store the first valid empty position we find
         Vector2I? firstValidPosition = null;
         
-        origin = chunk.ToWorldPosition(origin);
+        //origin = chunk.ToWorldPosition(origin);
         Vector2I nextPos = new Vector2I(origin.X, origin.Y + 1);
 
         foreach (Vector2I coord in coords)

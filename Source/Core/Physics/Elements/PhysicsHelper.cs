@@ -159,8 +159,7 @@ public struct PhysicsHelper
 
     public bool DoCancelHorizontalMotion(PixelElement pixel, float stability)
     {
-        double k = GD.RandRange(0.0f, 1.0f);
-        if (k < stability)
+        if (GD.RandRange(0.0f, 1.0f) < stability)
         {
             pixel.Physics = pixel.Physics with
             {
@@ -260,7 +259,7 @@ public struct PhysicsHelper
         Viscosity = 8,
         MomentumRate = 0.5f,
         HaltThreshold = 0.05f,
-        IsFalling = false,
+        IsFalling = true,
         Velocity = Vector2I.Zero,
         CancelHorizontalMotion = true,
         CancelVerticalMotion = true,
