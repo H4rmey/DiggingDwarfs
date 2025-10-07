@@ -65,6 +65,23 @@ public class PixelElement
         return clone;
     }
 
+    public virtual void ExecuteOnPixel(PixelWorld world, PixelChunk chunk, Vector2I origin, PixelAction action)
+    {
+        Vector2I executePos = origin;
+            
+        // Skip if position is out of bounds
+        if (!world.IsInBound(executePos))
+            return;
+
+        // Get the pixel at this position - for proof-of-concept, skip type checking
+        PixelElement pixel = world.GetPixelElementAt(executePos);
+        if (pixel != null)
+        {
+            // Invoke the action on the found pixel
+            action?.Invoke(pixel, executePos);
+        }
+    }
+
     public virtual void ExecuteTopBottomLeftRight(PixelWorld world, PixelChunk chunk, Vector2I origin, PixelAction action)
     {
         // Define all 8 surrounding positions (including diagonals)
@@ -78,19 +95,7 @@ public class PixelElement
 
         foreach (Vector2I offset in surroundingPositions)
         {
-            Vector2I checkPos = origin + offset;
-            
-            // Skip if position is out of bounds
-            if (!chunk.IsInBound(checkPos))
-                continue;
-
-            // Get the pixel at this position - for proof-of-concept, skip type checking
-            PixelElement pixel = world.GetPixelElementAt(checkPos);
-            if (pixel != null)
-            {
-                // Invoke the action on the found pixel
-                action?.Invoke(pixel, checkPos);
-            }
+            ExecuteOnPixel(world, chunk, origin + offset, action);
         }
     }
 
@@ -111,20 +116,36 @@ public class PixelElement
 
         foreach (Vector2I offset in surroundingPositions)
         {
-            Vector2I checkPos = origin + offset;
-            
-            // Skip if position is out of bounds
-            if (!chunk.IsInBound(checkPos))
-                continue;
-
-            // Get the pixel at this position - for proof-of-concept, skip type checking
-            PixelElement pixel = world.GetPixelElementAt(checkPos);
-            if (pixel != null)
-            {
-                // Invoke the action on the found pixel
-                action?.Invoke(pixel, checkPos);
-            }
+            ExecuteOnPixel(world, chunk, origin + offset, action);
         }
+    }
+    
+    public void SetPixelElementAt(PixelWorld world, PixelElement pixel, Vector2I pos)
+    {
+        if ( !world.IsInBound(pos)) { return; }
+        
+        PixelChunk chunk = world.GetChunkFrom(pos);
+        
+        //TODO: figure out why this breaks everything
+        //world.ActiveChunks.Add(chunk);
+        
+        chunk.SetPixel(new Vector2I( pos.X % world.ChunkSize.X, pos.Y % world.ChunkSize.Y), pixel);
+    }
+    
+    public void Process(PixelWorld world, PixelChunk chunk, PixelElement pixel, Vector2I origin)
+    {
+        (Vector2I current, Vector2I next) = Behaviour.GetSwapPosition(world, chunk, pixel, origin);
+
+        if (current == next) return; 
+        
+        //world.ActiveChunks.Add(world.GetChunkFrom(current));
+        //world.ActiveChunks.Add(world.GetChunkFrom(next));
+        
+        PixelElement currentPixel = world.GetPixelElementAt(current);
+        PixelElement nextPixel = world.GetPixelElementAt(next);
+        
+        SetPixelElementAt(world, currentPixel, next);
+        SetPixelElementAt(world, nextPixel, current);
     }
     
     // This function expects that the origin passed has already been converted to the worldposition beforehand by calling chunk.ToWorldPosition

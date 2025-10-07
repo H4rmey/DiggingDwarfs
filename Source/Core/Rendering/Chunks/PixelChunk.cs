@@ -21,6 +21,7 @@ public partial class PixelChunk : Node2D
     
     public Image image;
     public Sprite2D sprite;
+    public ImageTexture texture;
     public Vector2I mousePos;
     public Vector2 viewPortSize;
     
@@ -36,6 +37,7 @@ public partial class PixelChunk : Node2D
     public bool Debug = true;
     public Image debugImage;
     public Sprite2D debugSprite;
+    public ImageTexture debugTexture;
     
     public override void _Ready()
     {
@@ -47,7 +49,7 @@ public partial class PixelChunk : Node2D
         AddChild(sprite);
         sprite.AddChild(staticBody);
 
-        image  = Image.CreateEmpty(Size.X, Size.Y, false, Image.Format.Rgba8);
+        image = Image.CreateEmpty(Size.X, Size.Y, false, Image.Format.Rgba8);
         
         viewPortSize = GetViewport().GetVisibleRect().Size;
 
@@ -97,7 +99,8 @@ public partial class PixelChunk : Node2D
                 image.SetPixel(x, y, pixels[x, y].Color);
             }
         }
-        sprite.Texture = ImageTexture.CreateFromImage(image);
+        texture = ImageTexture.CreateFromImage(image);
+        sprite.Texture = texture;
     }
 
     public Vector2I ToWorldPosition(Vector2I pos)
@@ -111,7 +114,7 @@ public partial class PixelChunk : Node2D
         
         pix.SetRandomColor();
         pixels[pos.X, pos.Y] = pix;
-        image.SetPixel(pos.X, pos.Y, pix.Color);
+        image.SetPixelv(pos, pix.Color);
     }
 
     public bool IsInBound(Vector2I pos)
@@ -126,7 +129,8 @@ public partial class PixelChunk : Node2D
         
         debugImage = Image.CreateEmpty(Size.X, Size.Y, false, Image.Format.Rgba8);
         debugImage.Fill(Colors.Transparent);
-        debugSprite.Texture = ImageTexture.CreateFromImage(debugImage);
+        debugTexture = ImageTexture.CreateFromImage(debugImage);
+        debugSprite.Texture = debugTexture;
         AddChild(debugSprite);
     }
 
@@ -142,6 +146,6 @@ public partial class PixelChunk : Node2D
                 }
             }
         }
-        debugSprite.Texture = ImageTexture.CreateFromImage(debugImage);
+        debugTexture.Update(debugImage);
     }
 }

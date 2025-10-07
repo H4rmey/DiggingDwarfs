@@ -32,7 +32,7 @@ public partial class PixelWorld : Node2D
     public override void _Ready()
     {
         base._Ready();
-        ChunkCount = new Vector2I(2,2);
+        ChunkCount = new Vector2I(5, 5);
         ChunkSize = new Vector2I(16*2, 9*2);
 
         //Position = new Vector2(0, -10);
@@ -84,6 +84,8 @@ public partial class PixelWorld : Node2D
         }
 
         InitBrush();
+        InitWorld();
+        SetImagesForChunks();
     }
 
     public override void _PhysicsProcess(double delta)
@@ -120,6 +122,24 @@ public partial class PixelWorld : Node2D
         SetImagesForChunks();
         stopwatch.Stop();
         //GD.Print($"SetImagesForChunks Time: {stopwatch.ElapsedMilliseconds} ms");
+    }
+
+    public void InitWorld()
+    {
+        for (int x = 0; x < WorldSize.X; x++)
+        {
+            for (int y = 0; y < WorldSize.Y; y++)
+            {
+                if (y < WorldSize.Y / 2)
+                {
+                    SetPixelElementAt(new Vector2I(x,y), PixelFactory.CreateSolid());
+                }
+                else
+                {
+                    SetPixelElementAt(new Vector2I(x,y), PixelFactory.CreateAir());
+                }
+            }
+        }
     }
     
     private List<(Vector2I, Vector2I)> GetSwaps()
@@ -177,11 +197,11 @@ public partial class PixelWorld : Node2D
     {
         foreach (PixelChunk chunk in ActiveChunks)
         {
-            chunk.sprite.Texture = ImageTexture.CreateFromImage(chunk.image);
+            chunk.texture.Update(chunk.image);
         }
     }
 
-    private void SwapPixels(Vector2I current, Vector2I next)
+    public void SwapPixels(Vector2I current, Vector2I next)
     {
         PixelElement currentPixel = GetPixelElementAt(current);
         PixelElement nextPixel = GetPixelElementAt(next);
@@ -228,10 +248,22 @@ public partial class PixelWorld : Node2D
                 if (distance <= size)
                 {
                     Vector2I p = new Vector2I(pos.X + x, pos.Y +  y);
+                    
+                    if (!IsInBound(p)) continue;
+                    
+                    PixelElement pixel = GetPixelElementAt(p);
+                    pixel.ExecuteTopBottomLeftRight(this, GetChunkFrom(p), p, (adjacentPixel, otherPos) =>
+                    {
+                        adjacentPixel.Physics.DoCancelVerticalMotion(adjacentPixel, adjacentPixel.Physics.VerticalStability);
+                        adjacentPixel.Process(this,GetChunkFrom(otherPos),adjacentPixel,otherPos);
+                    });
+                    
                     SetPixelElementAt(p, PixelFactory.CreateAir());
                 }
             }
         }
+
+        SetImagesForChunks();
     }
 
     private void PaintRequestedEventHandler(Vector2I pos, int pixelTypeIndex, int size)
@@ -290,10 +322,10 @@ public partial class PixelWorld : Node2D
         }
         else
         {
-            return Chunks[0, 0];
+            return null;
         }
     }
-
+    
     // this functions expects a coordinate in the world not in the viewport
     public void SetPixelElementAt(Vector2I pos, PixelElement pixel)
     {

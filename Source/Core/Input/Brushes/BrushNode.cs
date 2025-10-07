@@ -73,7 +73,7 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
             
             if (isEraseHeldDown)
             {
-                EmitSignal(SignalName.EraseRequested, mousePos, brushSize);
+                //EmitSignal(SignalName.EraseRequested, mousePos, brushSize);
             }
 
             DrawPreview();
@@ -114,6 +114,7 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
             if (Godot.Input.IsMouseButtonPressed(MouseButton.Right))
             {
                 isEraseHeldDown = true;
+                EmitSignal(SignalName.EraseRequested, mousePos, brushSize);
             }
 
             if (Godot.Input.IsMouseButtonPressed(MouseButton.WheelUp))

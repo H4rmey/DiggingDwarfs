@@ -149,11 +149,17 @@ public struct PhysicsHelper
             pixel.Physics = pixel.Physics with
             {
                 CancelVerticalMotion = true,
+                IsFalling = false,
                 Momentum = 0.0f,
                 MomentumDirection = Vector2I.Zero
             };
             return true;
         }
+        pixel.Physics = pixel.Physics with
+        {
+            CancelVerticalMotion = false,
+            IsFalling = true
+        };
         return false;
     }
 
@@ -281,9 +287,9 @@ public struct PhysicsHelper
         MomentumRate = 1.0f,
         HaltThreshold = 0.5f,
         Velocity = Vector2I.Zero,
-        IsFalling = true,
-        CancelHorizontalMotion = false,
-        CancelVerticalMotion = false,
+        IsFalling = false,
+        CancelHorizontalMotion = true,
+        CancelVerticalMotion = true,
         Momentum = 0f,
         MomentumDirection = Vector2I.Zero
     };
