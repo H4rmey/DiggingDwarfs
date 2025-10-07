@@ -48,7 +48,7 @@ public class LiquidBehaviour : IPixelBehaviour
         // This is the complement to the IsFalling/CancelHorizontalMotion relationship:
         // - IsFalling=true requires CancelHorizontalMotion=true (enforced in PhysicsHelper)
         // - IsFalling=true requires CancelVerticalMotion=false (enforced here)
-        if (pixel.Physics.IsFalling) pixel.Physics = pixel.Physics with { CancelVerticalMotion = false };
+        //if (pixel.Physics.IsFalling) pixel.Physics = pixel.Physics with { CancelVerticalMotion = false };
 
         // If vertical motion is canceled, the pixel stays in place
         if (pixel.Physics.CancelVerticalMotion) return (origin, origin);

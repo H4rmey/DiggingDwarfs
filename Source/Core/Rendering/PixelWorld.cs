@@ -32,8 +32,8 @@ public partial class PixelWorld : Node2D
     public override void _Ready()
     {
         base._Ready();
-        ChunkCount = new Vector2I(5, 5);
-        ChunkSize = new Vector2I(16*2, 9*2);
+        ChunkCount = new Vector2I(2, 2);
+        ChunkSize = new Vector2I(16, 9);
 
         //Position = new Vector2(0, -10);
         WindowSize   = GetViewport().GetVisibleRect().Size;
@@ -254,7 +254,8 @@ public partial class PixelWorld : Node2D
                     PixelElement pixel = GetPixelElementAt(p);
                     pixel.ExecuteTopBottomLeftRight(this, GetChunkFrom(p), p, (adjacentPixel, otherPos) =>
                     {
-                        adjacentPixel.Physics.DoCancelVerticalMotion(adjacentPixel, adjacentPixel.Physics.VerticalStability);
+                        adjacentPixel.Physics.DoCancelVerticalMotion();
+                        ActiveChunks.Add(GetChunkFrom(pos));
                         adjacentPixel.Process(this,GetChunkFrom(otherPos),adjacentPixel,otherPos);
                     });
                     

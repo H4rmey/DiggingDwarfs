@@ -7,7 +7,7 @@ namespace SharpDiggingDwarfs.Core.Physics.Elements;
 /// Combined physics helper class for pixel elements - handles both data and logic.
 /// This class replaces and combines the functionality of PhysicsStatistics and PhysicsEnforcers.
 /// </summary>
-public struct PhysicsHelper
+public class PhysicsHelper
 {
     #region Properties from PhysicsStatistics
 
@@ -73,28 +73,28 @@ public struct PhysicsHelper
     public float HaltThreshold { get; set; }
     
     // Physics state properties
-    private bool _isFalling;
+    //private bool _isFalling;
     
-    /// <summary>
-    /// Whether the pixel is currently falling due to gravity.
-    /// When set to true, automatically sets CancelVerticalMotion to true as well
-    /// to ensure proper falling behavior.
-    /// 
-    /// IsFalling is primarily used to obtain wether or not the pixel is falling. 
-    /// To actually cancel the falling set CancelVeticalMotion
-    /// </summary>
-    public bool IsFalling
-    {
-        get => _isFalling;
-        set
-        {
-            _isFalling = value;
-            if (value)
-            {
-                CancelVerticalMotion = false;
-            }
-        }
-    }
+    ///// <summary>
+    ///// Whether the pixel is currently falling due to gravity.
+    ///// When set to true, automatically sets CancelVerticalMotion to true as well
+    ///// to ensure proper falling behavior.
+    ///// 
+    ///// IsFalling is primarily used to obtain wether or not the pixel is falling. 
+    ///// To actually cancel the falling set CancelVeticalMotion
+    ///// </summary>
+    //public bool IsFalling
+    //{
+    //    get => _isFalling;
+    //    set
+    //    {
+    //        _isFalling = value;
+    //        if (value)
+    //        {
+    //            CancelVerticalMotion = false;
+    //        }
+    //    }
+    //}
     
     /// <summary>
     /// Current velocity vector of the pixel
@@ -133,33 +133,24 @@ public struct PhysicsHelper
     /// <param name="pixel">The pixel to update</param>
     public void ApplyMomentum(PixelElement pixel)
     {
-        if (this.IsFalling)
+        if (! CancelVerticalMotion)
         {
-            pixel.Physics = pixel.Physics with
-            {
-                Momentum = Momentum + (Mass * MomentumRate)
-            };
+            Momentum = Momentum + (Mass * MomentumRate);
         }
     }
     
-    public bool DoCancelVerticalMotion(PixelElement pixel, float stability)
+    public bool DoCancelVerticalMotion()
     {
-        if (GD.RandRange(0.0f, 1.0f) < stability)
+        if (GD.RandRange(0.0f, 1.0f) < VerticalStability)
         {
-            pixel.Physics = pixel.Physics with
-            {
-                CancelVerticalMotion = true,
-                IsFalling = false,
-                Momentum = 0.0f,
-                MomentumDirection = Vector2I.Zero
-            };
+            CancelVerticalMotion = true;
+            Momentum = 0.0f;
+            MomentumDirection = Vector2I.Zero;
             return true;
         }
-        pixel.Physics = pixel.Physics with
-        {
-            CancelVerticalMotion = false,
-            IsFalling = true
-        };
+
+        CancelVerticalMotion = false;
+        
         return false;
     }
 
@@ -167,12 +158,9 @@ public struct PhysicsHelper
     {
         if (GD.RandRange(0.0f, 1.0f) < stability)
         {
-            pixel.Physics = pixel.Physics with
-            {
-                CancelHorizontalMotion = true,
-                Momentum = 0.0f,
-                MomentumDirection = Vector2I.Zero
-            };
+            CancelHorizontalMotion = true;
+            Momentum = 0.0f;
+            MomentumDirection = Vector2I.Zero;
             return true;
         }
         return false;
@@ -186,7 +174,7 @@ public struct PhysicsHelper
     {
         if (this.Mass > 0 && !this.CancelHorizontalMotion)
         {
-            pixel.Physics = pixel.Physics with { IsFalling = true };
+            CancelVerticalMotion = false;
         }
     }
     
@@ -207,7 +195,7 @@ public struct PhysicsHelper
             pixel.ExecuteSurroundingPixel(world, chunk, origin, (adjacentPixel, pos) => {
                 if (GD.RandRange(0.0f, 1.0f) < horizontalFriction)
                 {
-                    adjacentPixel.Physics = adjacentPixel.Physics with { CancelHorizontalMotion = false };
+                    CancelHorizontalMotion = false;
                 }
             });
         }
@@ -219,14 +207,11 @@ public struct PhysicsHelper
     /// <param name="pixel">The pixel to reset</param>
     public void ResetPhysics(PixelElement pixel)
     {
-        pixel.Physics = pixel.Physics with
-        {
-            IsFalling = false,
-            Momentum = 0,
-            Velocity = Vector2I.Zero,
-            CancelHorizontalMotion = false,
-            MomentumDirection = Vector2I.Zero
-        };
+        Momentum = 0;
+        Velocity = Vector2I.Zero;
+        CancelHorizontalMotion = false;
+        CancelVerticalMotion = false;
+        MomentumDirection = Vector2I.Zero;
     }
 
     #endregion
@@ -245,7 +230,6 @@ public struct PhysicsHelper
         Viscosity = 0,
         MomentumRate = 0f,
         HaltThreshold = 0f,
-        IsFalling = false,
         Velocity = Vector2I.Zero,
         CancelHorizontalMotion = true,
         CancelVerticalMotion = true,
@@ -265,10 +249,9 @@ public struct PhysicsHelper
         Viscosity = 8,
         MomentumRate = 0.5f,
         HaltThreshold = 0.05f,
-        IsFalling = true,
         Velocity = Vector2I.Zero,
         CancelHorizontalMotion = true,
-        CancelVerticalMotion = true,
+        CancelVerticalMotion = false,
         Momentum = 0f,
         MomentumDirection = Vector2I.Zero
     };
@@ -281,15 +264,14 @@ public struct PhysicsHelper
         Mass = 0.33f,
         Density = 2.0f,
         HorizontalStability = 0.25f,
-        VerticalStability = 0.25f,
+        VerticalStability = 0.75f,
         Stability = 1.0f,
         Viscosity = 0,
         MomentumRate = 1.0f,
         HaltThreshold = 0.5f,
         Velocity = Vector2I.Zero,
-        IsFalling = false,
         CancelHorizontalMotion = true,
-        CancelVerticalMotion = true,
+        CancelVerticalMotion = false,
         Momentum = 0f,
         MomentumDirection = Vector2I.Zero
     };
@@ -307,7 +289,6 @@ public struct PhysicsHelper
         MomentumRate = 0f,
         HaltThreshold = 1.0f,
         Velocity = Vector2I.Zero,
-        IsFalling = true,
         CancelHorizontalMotion = false,
         CancelVerticalMotion = false,
         Momentum = 0f,

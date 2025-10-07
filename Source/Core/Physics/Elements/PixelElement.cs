@@ -37,11 +37,8 @@ public class PixelElement
         
         // Apply random resistance coefficient for backward compatibility
         float randomFriction = (float)GD.RandRange(0.0f, 1.0f);
-        Physics = Physics with
-        {
-            HorizontalStability = randomFriction,
-            VerticalStability = randomFriction
-        };
+        Physics.HorizontalStability = randomFriction;
+        Physics.VerticalStability = randomFriction;
     }
     
     public virtual bool IsEmpty(PixelElement element)
