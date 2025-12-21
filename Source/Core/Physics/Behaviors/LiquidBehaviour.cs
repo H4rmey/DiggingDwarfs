@@ -16,7 +16,21 @@ public class LiquidBehaviour : IPixelBehaviour
     private int maxCheckTimes = 5000;
     public void InitializePhysics(PixelElement pixel)
     {
-        pixel.Physics = PhysicsHelper.Liquid;
+        pixel.Physics = new PhysicsHelper
+        {
+            Mass = 0.2f,
+            Density = 1.0f,
+            HorizontalStability = 0.5f,
+            VerticalStability = 0.1f,
+            Viscosity = 8,
+            MomentumRate = 0.5f,
+            HaltThreshold = 0.05f,
+            Velocity = Vector2I.Zero,
+            CancelHorizontalMotion = true,
+            CancelVerticalMotion = false,
+            Momentum = 0f,
+            MomentumDirection = Vector2I.Zero
+        };
     }
 
     public void UpdatePhysics(PixelElement pixel)
@@ -57,7 +71,7 @@ public class LiquidBehaviour : IPixelBehaviour
         Vector2I nextPos = new Vector2I(origin.X, origin.Y + 1);
         
         // 1. Check if you can place a pixel directly below
-        if (world.IsInBound(nextPos))
+        if (world.IsInBoundPixel(nextPos))
         {
             PixelElement belowPixel = world.GetPixelElementAt(nextPos);
             if (belowPixel.IsEmpty(pixel))
@@ -76,8 +90,16 @@ public class LiquidBehaviour : IPixelBehaviour
 
         // Check if the pixel should stop moving (based on physics thresholds like friction)
         // This simulates how real liquids can stop flowing in certain conditions
-        if (pixel.Physics.DoCancelHorizontalMotion(pixel, pixel.Physics.HorizontalStability))
+        if (pixel.Physics.DoCancelHorizontalMotion())
         {
+            
+            //Vector2I dir = Convert.ToBoolean(GD.RandRange(0, 1)) ? Vector2I.Left : Vector2I.Right;
+            //Vector2I newPos = origin + dir;
+            //PixelElement newPixel = world.GetPixelElementAt(newPos);
+            //if (newPixel != null && world.GetPixelElementAt(newPos).Type == PixelType.Empty)
+            //{
+            //    world.SetPixelElementAt(newPos, pixel.Clone());
+            //}
             return (origin, origin);
         }
 

@@ -77,6 +77,24 @@ public partial class PixelChunk : Node2D
 
         return Swaps;
     }
+    public Vector2I ToWorldPosition(Vector2I pos)
+    {
+        return new Vector2I(Size.X * WorldPosition.X + pos.X, Size.Y * WorldPosition.Y + pos.Y);
+    }
+
+    public void SetPixel(Vector2I pos, PixelElement pix)
+    {
+        if (!IsInBound(pos)) return;
+        
+        pix.SetRandomColor();
+        pixels[pos.X, pos.Y] = pix;
+        image.SetPixelv(pos, pix.Color);
+    }
+
+    public bool IsInBound(Vector2I pos)
+    {
+        return pos.X >= 0 && pos.X < Size.X && pos.Y >= 0 && pos.Y < Size.Y;
+    }
 
     private void InitPixels()
     {
@@ -103,25 +121,8 @@ public partial class PixelChunk : Node2D
         sprite.Texture = texture;
     }
 
-    public Vector2I ToWorldPosition(Vector2I pos)
-    {
-        return new Vector2I(Size.X * WorldPosition.X + pos.X, Size.Y * WorldPosition.Y + pos.Y);
-    }
 
-    public void SetPixel(Vector2I pos, PixelElement pix)
-    {
-        if (!IsInBound(pos)) return;
-        
-        pix.SetRandomColor();
-        pixels[pos.X, pos.Y] = pix;
-        image.SetPixelv(pos, pix.Color);
-    }
-
-    public bool IsInBound(Vector2I pos)
-    {
-        return pos.X >= 0 && pos.X < Size.X && pos.Y >= 0 && pos.Y < Size.Y;
-    }
-
+    # region DEBUG
     private void DEBUG_init()
     {
         debugSprite = new Sprite2D();
@@ -148,4 +149,5 @@ public partial class PixelChunk : Node2D
         }
         debugTexture.Update(debugImage);
     }
+    # endregion
 }

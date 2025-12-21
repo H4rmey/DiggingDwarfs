@@ -9,6 +9,12 @@ namespace SharpDiggingDwarfs.Core.Physics.Elements;
 /// </summary>
 public class PhysicsHelper
 {
+    public virtual PhysicsHelper Clone()
+    {
+        PhysicsHelper clone = (PhysicsHelper)MemberwiseClone();
+        return clone;
+    }
+    
     #region Properties from PhysicsStatistics
 
     /// <summary>
@@ -154,9 +160,10 @@ public class PhysicsHelper
         return false;
     }
 
-    public bool DoCancelHorizontalMotion(PixelElement pixel, float stability)
+    public bool DoCancelHorizontalMotion()
     {
-        if (GD.RandRange(0.0f, 1.0f) < stability)
+        double value = GD.RandRange(0.0f, 1.0f);
+        if (value < HorizontalStability)
         {
             CancelHorizontalMotion = true;
             Momentum = 0.0f;
@@ -192,7 +199,7 @@ public class PhysicsHelper
             float horizontalFriction = this.HorizontalStability;
             
             // Trigger surrounding pixels to potentially start flowing
-            pixel.ExecuteSurroundingPixel(world, chunk, origin, (adjacentPixel, pos) => {
+            pixel.ExecuteSurroundingPixel(world, origin, (adjacentPixel, pos) => {
                 if (GD.RandRange(0.0f, 1.0f) < horizontalFriction)
                 {
                     CancelHorizontalMotion = false;
@@ -213,87 +220,6 @@ public class PhysicsHelper
         CancelVerticalMotion = false;
         MomentumDirection = Vector2I.Zero;
     }
-
-    #endregion
-
-    #region Factory Methods
-
-    /// <summary>
-    /// Creates physics helper with default values for empty/air pixels
-    /// </summary>
-    public static PhysicsHelper Empty => new PhysicsHelper
-    {
-        Mass = 0f,
-        Density = 0f,
-        HorizontalStability = 0f,
-        VerticalStability = 0f,
-        Viscosity = 0,
-        MomentumRate = 0f,
-        HaltThreshold = 0f,
-        Velocity = Vector2I.Zero,
-        CancelHorizontalMotion = true,
-        CancelVerticalMotion = true,
-        Momentum = 0f,
-        MomentumDirection = Vector2I.Zero
-    };
-    
-    /// <summary>
-    /// Creates physics helper for liquid behavior
-    /// </summary>
-    public static PhysicsHelper Liquid => new PhysicsHelper
-    {
-        Mass = 0.2f,
-        Density = 1.0f,
-        HorizontalStability = 0.5f,
-        VerticalStability = 0.1f,
-        Viscosity = 8,
-        MomentumRate = 0.5f,
-        HaltThreshold = 0.05f,
-        Velocity = Vector2I.Zero,
-        CancelHorizontalMotion = true,
-        CancelVerticalMotion = false,
-        Momentum = 0f,
-        MomentumDirection = Vector2I.Zero
-    };
-    
-    /// <summary>
-    /// Creates physics helper for solid/granular behavior
-    /// </summary>
-    public static PhysicsHelper Solid => new PhysicsHelper
-    {
-        Mass = 0.33f,
-        Density = 2.0f,
-        HorizontalStability = 0.25f,
-        VerticalStability = 0.75f,
-        Stability = 1.0f,
-        Viscosity = 0,
-        MomentumRate = 1.0f,
-        HaltThreshold = 0.5f,
-        Velocity = Vector2I.Zero,
-        CancelHorizontalMotion = true,
-        CancelVerticalMotion = false,
-        Momentum = 0f,
-        MomentumDirection = Vector2I.Zero
-    };
-    
-    /// <summary>
-    /// Creates physics helper for immovable scaffolding behavior
-    /// </summary>
-    public static PhysicsHelper Scaffolding => new PhysicsHelper
-    {
-        Mass = 10.0f,
-        Density = 5.0f,
-        HorizontalStability = 1.0f,
-        VerticalStability = 1.0f,
-        Viscosity = 0,
-        MomentumRate = 0f,
-        HaltThreshold = 1.0f,
-        Velocity = Vector2I.Zero,
-        CancelHorizontalMotion = false,
-        CancelVerticalMotion = false,
-        Momentum = 0f,
-        MomentumDirection = Vector2I.Zero
-    };
 
     #endregion
 }

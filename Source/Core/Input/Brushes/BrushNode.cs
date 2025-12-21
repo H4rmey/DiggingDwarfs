@@ -37,7 +37,7 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
         private Sprite2D previewSprite;
 
         private Vector2 mousePos;
-        private int brushSize = 0;
+        private int brushSize = 5;
         private int pixelType = 2;
         
         private bool isPaintHeldDown = false;
@@ -157,7 +157,7 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
                     float distance = Mathf.Sqrt(x * x + y * y);
                     Vector2I p = new Vector2I(pos.X + x, pos.Y +  y);
 
-                    if (!ParentWorld.IsInBound(p))
+                    if (!ParentWorld.IsInBoundPixel(p))
                     {
                         continue;
                     }

@@ -18,7 +18,7 @@ public interface IPixelBehaviour
     /// <summary>
     /// Determines the next position for a pixel based on its current position and the chunk state
     /// </summary>
-    /// <param name="origin">Current position of the pixel</param>
+    /// <param name="origin">Current position of the pixel, must be local to the chunk</param>
     /// <param name="chunk">The pixel chunk containing the simulation state</param>
     /// <param name="pixel">The pixel element that is moving</param>
     /// <returns>A tuple containing the current position and the desired next position</returns>

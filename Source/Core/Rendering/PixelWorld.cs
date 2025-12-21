@@ -32,7 +32,7 @@ public partial class PixelWorld : Node2D
     public override void _Ready()
     {
         base._Ready();
-        ChunkCount = new Vector2I(2, 2);
+        ChunkCount = new Vector2I(32, 32);
         ChunkSize = new Vector2I(16, 9);
 
         //Position = new Vector2(0, -10);
@@ -52,8 +52,6 @@ public partial class PixelWorld : Node2D
         
         AddChild(Cam);
         
-        
-
         Chunks = new PixelChunk[ChunkCount.X, ChunkCount.Y];
         ActiveChunks = new HashSet<PixelChunk>();
         
@@ -85,7 +83,16 @@ public partial class PixelWorld : Node2D
 
         InitBrush();
         InitWorld();
-        SetImagesForChunks();
+        UpdateActiveChunks();
+    }
+
+    public override void _Input(InputEvent @event)
+    {
+        if (@event is InputEventKey keyEvent && keyEvent.Pressed && keyEvent.Keycode == Key.Enter)
+        {
+            GD.Print("Rendering Next Frame!");
+            RefreshFrame();
+        }
     }
 
     public override void _PhysicsProcess(double delta)
@@ -93,65 +100,21 @@ public partial class PixelWorld : Node2D
         base._PhysicsProcess(delta);
         RefreshFrame();
     }
-
-    private void RefreshFrame()
-    {
-        Stopwatch stopwatch = new Stopwatch();
-
-        stopwatch.Start();
-        List<(Vector2I, Vector2I)> swaps = GetSwaps();
-        stopwatch.Stop();
-        //GD.Print($"GetSwaps Time: {stopwatch.ElapsedMilliseconds} ms");
-
-        //GD.Print($"FPS: {Engine.GetFramesPerSecond()}");
-        //GD.Print($"SWP: {swaps.Count}");
-
-        stopwatch.Restart();
-        ProcessSwaps(swaps);
-        stopwatch.Stop();
-        //GD.Print($"ProcessSwaps Time: {stopwatch.ElapsedMilliseconds} ms");
-
-        swaps.Clear();
-
-        stopwatch.Restart();
-        DEBUG_RenderActiveChunkBorders(new Color(0, 0, 1, 0.25f));
-        stopwatch.Stop();
-        //GD.Print($"DEBUG_RenderActiveChunkBorders Time: {stopwatch.ElapsedMilliseconds} ms");
-
-        stopwatch.Restart();
-        SetImagesForChunks();
-        stopwatch.Stop();
-        //GD.Print($"SetImagesForChunks Time: {stopwatch.ElapsedMilliseconds} ms");
-    }
-
-    public void InitWorld()
-    {
-        for (int x = 0; x < WorldSize.X; x++)
-        {
-            for (int y = 0; y < WorldSize.Y; y++)
-            {
-                if (y < WorldSize.Y / 2)
-                {
-                    SetPixelElementAt(new Vector2I(x,y), PixelFactory.CreateSolid());
-                }
-                else
-                {
-                    SetPixelElementAt(new Vector2I(x,y), PixelFactory.CreateAir());
-                }
-            }
-        }
-    }
     
-    private List<(Vector2I, Vector2I)> GetSwaps()
+    # region SWAPS
+    private List<(Vector2I, Vector2I)> GetSwapsFromChunks()
     {
         List<(Vector2I, Vector2I)> swaps = new();
 
-        foreach (PixelChunk chunk in ActiveChunks)
+        List<PixelChunk> chunksToRemove = new List<PixelChunk>();
+        // convert ActiveChunks to a list so it is a copy
+        foreach (PixelChunk chunk in ActiveChunks.ToList())
         {
+            if (chunk == null) continue;
             List<(Vector2I, Vector2I)> swap = chunk.GetSwapPositions();
             if (swap.Count == 0)
             {
-                ActiveChunks.Remove(chunk);
+                chunksToRemove.Add(chunk);
                 chunk.IsActive = false;
                 chunk.DEBUG_DrawBorder(new Color(1, 0, 0, 0.25f));
                 continue;
@@ -160,8 +123,13 @@ public partial class PixelWorld : Node2D
             swaps.AddRange(swap);
         }
 
+        foreach (PixelChunk chunk in chunksToRemove)
+        {
+            ActiveChunks.Remove(chunk);
+        }
+
         return swaps;
-    }
+    } 
     
     private void ProcessSwaps(List<(Vector2I, Vector2I)> swaps)
     {
@@ -193,14 +161,6 @@ public partial class PixelWorld : Node2D
         }
     }
 
-    private void SetImagesForChunks()
-    {
-        foreach (PixelChunk chunk in ActiveChunks)
-        {
-            chunk.texture.Update(chunk.image);
-        }
-    }
-
     public void SwapPixels(Vector2I current, Vector2I next)
     {
         PixelElement currentPixel = GetPixelElementAt(current);
@@ -208,9 +168,11 @@ public partial class PixelWorld : Node2D
         
         SetPixelElementAt(next, currentPixel);
         SetPixelElementAt(current, nextPixel);
+        
     }
+    # endregion
 
-
+    # region BRUSH
     private void InitBrush()
     {
         var brushScene = GD.Load<PackedScene>("res://Resources/Scenes/BrushNode.tscn");
@@ -249,22 +211,14 @@ public partial class PixelWorld : Node2D
                 {
                     Vector2I p = new Vector2I(pos.X + x, pos.Y +  y);
                     
-                    if (!IsInBound(p)) continue;
-                    
-                    PixelElement pixel = GetPixelElementAt(p);
-                    pixel.ExecuteTopBottomLeftRight(this, GetChunkFrom(p), p, (adjacentPixel, otherPos) =>
-                    {
-                        adjacentPixel.Physics.DoCancelVerticalMotion();
-                        ActiveChunks.Add(GetChunkFrom(pos));
-                        adjacentPixel.Process(this,GetChunkFrom(otherPos),adjacentPixel,otherPos);
-                    });
+                    if (!IsInBoundPixel(p)) continue;
                     
                     SetPixelElementAt(p, PixelFactory.CreateAir());
                 }
             }
         }
 
-        SetImagesForChunks();
+        UpdateActiveChunks();
     }
 
     private void PaintRequestedEventHandler(Vector2I pos, int pixelTypeIndex, int size)
@@ -288,8 +242,158 @@ public partial class PixelWorld : Node2D
                 }
             }
         }
-        SetImagesForChunks();
+        
+        UpdateActiveChunks();
     }
+    # endregion
+    
+    # region CHUNK
+    // returns the chunk at a given world position
+    // this functions expects a coordinate in the world not in the viewport
+    public PixelChunk GetChunkFrom(Vector2I pos)
+    {
+        //int chunkWidth = WorldSize.X / ChunkCount.X;  
+        //int chunkHeight = WorldSize.Y / ChunkCount.Y;
+
+        int x = pos.X / ChunkSize.X;
+        int y = pos.Y / ChunkSize.Y;
+        //GD.Print(new Vector2I(x,y));
+
+        if (IsInBoundChunk(new Vector2I(x, y)))
+        {
+            return Chunks[x, y];
+        }
+        else
+        {
+            return null;
+        }
+    }
+
+    private void UpdateActiveChunks()
+    {
+        foreach (PixelChunk chunk in ActiveChunks)
+        {
+            if (chunk == null) continue;
+            chunk.texture.Update(chunk.image);
+        }
+    }
+    # endregion 
+    
+    # region PIXEL
+    // this functions expects a coordinate in the world not in the viewport
+    public void SetPixelElementAt(Vector2I pos, PixelElement pixel)
+    {
+        if ( !IsInBoundPixel(pos)) { return; }
+        
+        PixelChunk chunk = GetChunkFrom(pos);
+        if (chunk == null) return;
+        
+        chunk.IsActive = true;
+        ActiveChunks.Add(chunk);
+        
+        int x = chunk.WorldPosition.X;
+        int y = chunk.WorldPosition.Y;
+
+        int maxX = Chunks.GetLength(0);
+        int maxY = Chunks.GetLength(1);
+
+        chunk.SetPixel(new Vector2I( pos.X % ChunkSize.X, pos.Y % ChunkSize.Y), pixel);
+        
+        //pixel.ExecuteOnPixel(this, pos + new Vector2I(0,-1), (executePixel, position) =>
+        //{
+        //    pixel.Process(this,position);
+        //    //pixel.SetRandomColor();
+        //});
+        
+        
+        // Check above
+        if (y - 1 >= 0 && Chunks[x, y - 1] != null)
+            if (pos.Y % ChunkSize.Y == 0 && y  > 0 && Chunks[x, y - 1] != null)
+            {
+                ActiveChunks.Add(Chunks[x, y - 1]);
+            }
+
+        // Check below
+        //if (y % ChunkSize.Y == 0 && y + 1 < maxY && Chunks[x, y + 1] != null)
+        //{
+        //    ActiveChunks.Add(Chunks[x, y + 1]);
+        //}
+        
+    }
+
+    // this functions expects a coordinate in the world not in the viewport
+    public PixelElement GetPixelElementAt(Vector2I pos)
+    {
+        PixelChunk chunk = GetChunkFrom(pos);
+        if (chunk == null) return null;
+
+        // get the local chunk coordinate
+        int x = pos.X % ChunkSize.X;
+        int y = pos.Y % ChunkSize.Y;
+
+        if (chunk.IsInBound(new Vector2I(x, y)))
+        {
+            return chunk.pixels[x, y];  
+        }
+        else
+        {
+            return null;
+        }
+    }
+    
+    # endregion
+
+    public void InitWorld()
+    {
+        for (int x = 0; x < WorldSize.X; x++)
+        {
+            for (int y = 0; y < WorldSize.Y; y++)
+            {
+                SetPixelElementAt(new Vector2I(x,y), PixelFactory.CreateAir());
+                //SetPixelElementAt(new Vector2I(x,y), PixelFactory.CreateSolid());
+                //if (y < WorldSize.Y / 2)
+                //{
+                //    SetPixelElementAt(new Vector2I(x,y), PixelFactory.CreateSolid());
+                //}
+                //else
+                //{
+                //    SetPixelElementAt(new Vector2I(x,y), PixelFactory.CreateAir());
+                //}
+            }
+        }
+    }
+    
+    private void RefreshFrame()
+    {
+        Stopwatch stopwatch = new Stopwatch();
+
+        //stopwatch.Start();
+        List<(Vector2I, Vector2I)> swaps = GetSwapsFromChunks();
+        //stopwatch.Stop();
+        //GD.Print($"GetSwaps Time: {stopwatch.ElapsedMilliseconds} ms");
+
+        //GD.Print($"FPS: {Engine.GetFramesPerSecond()}");
+        //GD.Print($"SWP: {swaps.Count}");
+
+        //stopwatch.Restart();
+        ProcessSwaps(swaps);
+        //stopwatch.Stop();
+        //GD.Print($"ProcessSwaps Time: {stopwatch.ElapsedMilliseconds} ms");
+
+        swaps.Clear();
+
+        //stopwatch.Restart();
+        DEBUG_RenderActiveChunkBorders(new Color(0, 0, 1, 0.25f));
+        //stopwatch.Stop();
+        //GD.Print($"DEBUG_RenderActiveChunkBorders Time: {stopwatch.ElapsedMilliseconds} ms");
+
+        //stopwatch.Restart();
+        UpdateActiveChunks();
+        //stopwatch.Stop();
+        //GD.Print($"SetImagesForChunks Time: {stopwatch.ElapsedMilliseconds} ms");
+    }
+    
+    # region MISC
     
     public Vector2I CamToWorld(Vector2 screenPos)
     {
@@ -307,91 +411,29 @@ public partial class PixelWorld : Node2D
         return new Vector2I( pos.X % ChunkSize.X, pos.Y % ChunkSize.Y);
     }
 
-    // returns the chunk at a given world position
-    // this functions expects a coordinate in the world not in the viewport
-    public PixelChunk GetChunkFrom(Vector2I pos)
-    {
-        int chunkWidth = WorldSize.X / ChunkCount.X;  
-        int chunkHeight = WorldSize.Y / ChunkCount.Y;
-
-        int x = pos.X / chunkWidth;
-        int y = pos.Y / chunkHeight;
-
-        if (IsInBound(new Vector2I(x, y)))
-        {
-            return Chunks[x, y];
-        }
-        else
-        {
-            return null;
-        }
-    }
-    
-    // this functions expects a coordinate in the world not in the viewport
-    public void SetPixelElementAt(Vector2I pos, PixelElement pixel)
-    {
-        if ( !IsInBound(pos)) { return; }
-        
-        PixelChunk chunk = GetChunkFrom(pos);
-        chunk.IsActive = true;
-        ActiveChunks.Add(chunk);
-        
-        int x = chunk.WorldPosition.X;
-        int y = chunk.WorldPosition.Y;
-
-        int maxX = Chunks.GetLength(0);
-        int maxY = Chunks.GetLength(1);
-
-        // Check above
-        //if (y - 1 >= 0 && Chunks[x, y - 1] != null)
-        if (pos.Y % ChunkSize.Y == 0 && y  > 0 && Chunks[x, y - 1] != null)
-        {
-            ActiveChunks.Add(Chunks[x, y - 1]);
-        }
-
-        // Check below
-        //if (y % ChunkSize.Y == 0 && y + 1 < maxY && Chunks[x, y + 1] != null)
-        //{
-        //    ActiveChunks.Add(Chunks[x, y + 1]);
-        //}
-        
-        chunk.SetPixel(new Vector2I( pos.X % ChunkSize.X, pos.Y % ChunkSize.Y), pixel);
-    }
-
-    // this functions expects a coordinate in the world not in the viewport
-    public PixelElement GetPixelElementAt(Vector2I pos)
-    {
-        PixelChunk chunk = GetChunkFrom(pos);
-
-        // get the local chunk coordinate
-        int x = pos.X % ChunkSize.X;
-        int y = pos.Y % ChunkSize.Y;
-        
-        return chunk.pixels[x, y];  
-    }
-
     // checks if a pixel is inbound in the world
     // input is expect to be a coordinate in the world not the viewport
-    public bool IsInBound(Vector2I pos)
+    public bool IsInBoundPixel(Vector2I pos)
     {
         return pos.X >= 0 && pos.X < WorldSize.X && pos.Y >= 0 && pos.Y < WorldSize.Y;
     }
-
-    public override void _Input(InputEvent @event)
+    
+    public bool IsInBoundChunk(Vector2I pos)
     {
-        if (@event is InputEventKey keyEvent && keyEvent.Pressed && keyEvent.Keycode == Key.Enter)
-        {
-            GD.Print("Rendering Next Frame!");
-            RefreshFrame();
-        }
+        return pos.X >= 0 && pos.X < ChunkCount.X && pos.Y >= 0 && pos.Y < ChunkCount.Y;
     }
 
+    # endregion
+    
+    # region DEBUG
     private void DEBUG_RenderActiveChunkBorders(Color color)
     {
         // Only color the border of active chunks
         foreach (PixelChunk chunk in ActiveChunks)
         {
+            if (chunk == null) continue;
             chunk.DEBUG_DrawBorder(color);
         }
     }
+    #endregion
 }

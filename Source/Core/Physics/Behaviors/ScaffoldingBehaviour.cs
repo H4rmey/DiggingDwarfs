@@ -22,7 +22,21 @@ public class ScaffoldingBehaviour : IPixelBehaviour
     
     public void InitializePhysics(PixelElement pixel)
     {
-        pixel.Physics = PhysicsHelper.Scaffolding;
+        pixel.Physics = new PhysicsHelper
+        {
+            Mass = 10.0f,
+            Density = 5.0f,
+            HorizontalStability = 1.0f,
+            VerticalStability = 1.0f,
+            Viscosity = 0,
+            MomentumRate = 0f,
+            HaltThreshold = 1.0f,
+            Velocity = Vector2I.Zero,
+            CancelHorizontalMotion = false,
+            CancelVerticalMotion = false,
+            Momentum = 0f,
+            MomentumDirection = Vector2I.Zero
+        };
         pixel.Type = PixelType.Scaffolding;
     }
 
@@ -47,13 +61,13 @@ public class ScaffoldingBehaviour : IPixelBehaviour
         PixelElement belowPixel = null;
         
         // 1. Check if you can place a pixel directly below
-        if (world.IsInBound(nextPos))
+        if (world.IsInBoundPixel(nextPos))
         {
             belowPixel = world.GetPixelElementAt(nextPos);
         }
 
         // Check if this pixel has a SOLID or out of bounds below it - makes it an Anchor Pixel
-        if (belowPixel == null || belowPixel.Type == PixelType.Solid || !world.IsInBound(nextPos))
+        if (belowPixel == null || belowPixel.Type == PixelType.Solid || !world.IsInBoundPixel(nextPos))
         {
             IsAnchor = true;
             IsVerticalStable = true;
@@ -92,7 +106,7 @@ public class ScaffoldingBehaviour : IPixelBehaviour
         //}
 
         // Check if we can fall
-        if (world.IsInBound(nextPos))
+        if (world.IsInBoundPixel(nextPos))
         {
             PixelElement targetPixel = world.GetPixelElementAt(nextPos);
             if (targetPixel != null && targetPixel.IsEmpty(pixel))
@@ -120,7 +134,7 @@ public class ScaffoldingBehaviour : IPixelBehaviour
         {
             int checkX = origin.X + (i * direction);
             
-            if (!world.IsInBound(new Vector2I(checkX, origin.Y)))
+            if (!world.IsInBoundPixel(new Vector2I(checkX, origin.Y)))
                 break;
                 
             PixelElement checkPixel = world.GetPixelElementAt(new Vector2I(checkX, origin.Y));
@@ -130,7 +144,7 @@ public class ScaffoldingBehaviour : IPixelBehaviour
             {
                 // Check if this scaffolding pixel has another scaffolding pixel below it and is vertically stable
                 PixelElement belowCheckPixel = null;
-                if (world.IsInBound(origin))
+                if (world.IsInBoundPixel(origin))
                 {
                     belowCheckPixel = world.GetPixelElementAt(new Vector2I(checkX, origin.Y + 1));
                 }

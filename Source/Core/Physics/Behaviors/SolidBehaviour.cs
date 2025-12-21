@@ -15,7 +15,22 @@ public class SolidBehaviour : IPixelBehaviour
 {
     public void InitializePhysics(PixelElement pixel)
     {
-        pixel.Physics = PhysicsHelper.Solid;
+        pixel.Physics = new PhysicsHelper
+        {
+            Mass = 0.33f,
+            Density = 2.0f,
+            HorizontalStability = 0.01f,
+            VerticalStability = 0.75f,
+            Stability = 1.0f,
+            Viscosity = 0,
+            MomentumRate = 1.0f,
+            HaltThreshold = 0.5f,
+            Velocity = Vector2I.Zero,
+            CancelHorizontalMotion = false,
+            CancelVerticalMotion = false,
+            Momentum = 0f,
+            MomentumDirection = Vector2I.Zero
+        };
     }
 
     public void UpdatePhysics(PixelElement pixel)
@@ -32,19 +47,20 @@ public class SolidBehaviour : IPixelBehaviour
     }
 
     
+    // The origin value must a value local to the given chunk NOT the global world positiion
     public (Vector2I Current, Vector2I Next) GetSwapPosition(PixelWorld world, PixelChunk chunk, PixelElement pixel, Vector2I origin)
     {
         // if a pixel is falling, make sure the vertical motion is allowed.
         //if (pixel.Physics.IsFalling) pixel.Physics = pixel.Physics with { CancelVerticalMotion = false };
         
         if (pixel.Physics.CancelVerticalMotion) return (origin, origin);
-        //if (pixel.Physics.DoCancelVerticalMotion(pixel, pixel.Physics.VerticalStability)) return (origin, origin);
+        //if (pixel.Physics.DoCancelVerticalMotion()) return (origin, origin);
 
         origin = chunk.ToWorldPosition(origin);
         Vector2I nextPos = new Vector2I(origin.X, origin.Y + 1);
         
         // 1. Check if you can place a pixel directly below
-        if (world.IsInBound(nextPos))
+        if (world.IsInBoundPixel(nextPos))
         {
             PixelElement belowPixel = world.GetPixelElementAt(nextPos);
             if (belowPixel.IsEmpty(pixel))
@@ -70,8 +86,8 @@ public class SolidBehaviour : IPixelBehaviour
 
         // 1.1 Handle sudden stop using enforcers
         // DoCancelHorizontalMotion is used to suddenly stop the pixel from moving
-        if (pixel.Physics.CancelHorizontalMotion)                                             return (origin, origin);
-        if (pixel.Physics.DoCancelHorizontalMotion(pixel, pixel.Physics.HorizontalStability)) return (origin, origin);
+        if (pixel.Physics.CancelHorizontalMotion)     return (origin, origin);
+        if (pixel.Physics.DoCancelHorizontalMotion()) return (origin, origin);
         
         // 2. If there is no place directly below -> check the belowLeft and belowRight side in a random order
         var diagonalPositions = new List<Vector2I>
@@ -88,7 +104,7 @@ public class SolidBehaviour : IPixelBehaviour
 
         // Try first diagonal direction
         nextPos = new Vector2I(origin.X + firstDirection.X, origin.Y + firstDirection.Y);
-        if (world.IsInBound(nextPos))
+        if (world.IsInBoundPixel(nextPos))
         {
             PixelElement diagonalPixel = world.GetPixelElementAt(nextPos);
             if (diagonalPixel.IsEmpty(pixel))
@@ -103,7 +119,7 @@ public class SolidBehaviour : IPixelBehaviour
 
         // Try second diagonal direction
         nextPos = new Vector2I(origin.X + secondDirection.X, origin.Y + secondDirection.Y);
-        if (world.IsInBound(nextPos))
+        if (world.IsInBoundPixel(nextPos))
         {
             PixelElement diagonalPixel = world.GetPixelElementAt(nextPos);
             if (diagonalPixel.IsEmpty(pixel))
@@ -132,7 +148,7 @@ public class SolidBehaviour : IPixelBehaviour
             // Move in the stored momentum direction
             Vector2I targetPos = origin + pixel.Physics.MomentumDirection;
 
-            if (world.IsInBound(targetPos))
+            if (world.IsInBoundPixel(targetPos))
             {
                 PixelElement targetPixel = world.GetPixelElementAt(targetPos);
                 if (targetPixel.IsEmpty(pixel) && targetPixel.Physics.CancelVerticalMotion)

@@ -13,7 +13,21 @@ public class EmptyBehaviour : IPixelBehaviour
 {
     public void InitializePhysics(PixelElement pixel)
     {
-        pixel.Physics = PhysicsHelper.Empty;
+        pixel.Physics = new PhysicsHelper
+        {
+            Mass = 0f,
+            Density = 0f,
+            HorizontalStability = 0f,
+            VerticalStability = 0f,
+            Viscosity = 0,
+            MomentumRate = 0f,
+            HaltThreshold = 0f,
+            Velocity = Vector2I.Zero,
+            CancelHorizontalMotion = true,
+            CancelVerticalMotion = true,
+            Momentum = 0f,
+            MomentumDirection = Vector2I.Zero
+        };
     }
 
     public void UpdatePhysics(PixelElement pixel)

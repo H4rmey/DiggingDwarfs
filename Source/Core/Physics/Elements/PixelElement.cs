@@ -33,12 +33,27 @@ public class PixelElement
         Type      = PixelType.Empty;
         
         // Initialize the physics system with default empty values
-        Physics = PhysicsHelper.Empty;
+        Physics = new PhysicsHelper
+        {
+            Mass = 0f,
+            Density = 0f,
+            HorizontalStability = 0f,
+            VerticalStability = 0f,
+            Viscosity = 0,
+            MomentumRate = 0f,
+            HaltThreshold = 0f,
+            Velocity = Vector2I.Zero,
+            CancelHorizontalMotion = true,
+            CancelVerticalMotion = true,
+            Momentum = 0f,
+            MomentumDirection = Vector2I.Zero
+        };
         
         // Apply random resistance coefficient for backward compatibility
         float randomFriction = (float)GD.RandRange(0.0f, 1.0f);
         Physics.HorizontalStability = randomFriction;
         Physics.VerticalStability = randomFriction;
+        GD.Randomize();
     }
     
     public virtual bool IsEmpty(PixelElement element)
@@ -59,15 +74,16 @@ public class PixelElement
     public virtual PixelElement Clone()
     {
         PixelElement clone = (PixelElement)MemberwiseClone();
+        clone.Physics = Physics.Clone();  // Deep clone the physics to avoid sharing
         return clone;
     }
 
-    public virtual void ExecuteOnPixel(PixelWorld world, PixelChunk chunk, Vector2I origin, PixelAction action)
+    public virtual void ExecuteOnPixel(PixelWorld world, Vector2I origin, PixelAction action)
     {
         Vector2I executePos = origin;
             
         // Skip if position is out of bounds
-        if (!world.IsInBound(executePos))
+        if (!world.IsInBoundPixel(executePos))
             return;
 
         // Get the pixel at this position - for proof-of-concept, skip type checking
@@ -79,7 +95,7 @@ public class PixelElement
         }
     }
 
-    public virtual void ExecuteTopBottomLeftRight(PixelWorld world, PixelChunk chunk, Vector2I origin, PixelAction action)
+    public virtual void ExecuteTopBottomLeftRight(PixelWorld world, Vector2I origin, PixelAction action)
     {
         // Define all 8 surrounding positions (including diagonals)
         Vector2I[] surroundingPositions = new Vector2I[]
@@ -92,11 +108,11 @@ public class PixelElement
 
         foreach (Vector2I offset in surroundingPositions)
         {
-            ExecuteOnPixel(world, chunk, origin + offset, action);
+            ExecuteOnPixel(world, origin + offset, action);
         }
     }
 
-    public virtual void ExecuteSurroundingPixel(PixelWorld world, PixelChunk chunk, Vector2I origin, PixelAction action)
+    public virtual void ExecuteSurroundingPixel(PixelWorld world, Vector2I origin, PixelAction action)
     {
         // Define all 8 surrounding positions (including diagonals)
         Vector2I[] surroundingPositions = new Vector2I[]
@@ -113,36 +129,30 @@ public class PixelElement
 
         foreach (Vector2I offset in surroundingPositions)
         {
-            ExecuteOnPixel(world, chunk, origin + offset, action);
+            ExecuteOnPixel(world, origin + offset, action);
         }
     }
     
-    public void SetPixelElementAt(PixelWorld world, PixelElement pixel, Vector2I pos)
+    public void Process(PixelWorld world, Vector2I origin)
     {
-        if ( !world.IsInBound(pos)) { return; }
-        
-        PixelChunk chunk = world.GetChunkFrom(pos);
-        
-        //TODO: figure out why this breaks everything
-        //world.ActiveChunks.Add(chunk);
-        
-        chunk.SetPixel(new Vector2I( pos.X % world.ChunkSize.X, pos.Y % world.ChunkSize.Y), pixel);
-    }
-    
-    public void Process(PixelWorld world, PixelChunk chunk, PixelElement pixel, Vector2I origin)
-    {
-        (Vector2I current, Vector2I next) = Behaviour.GetSwapPosition(world, chunk, pixel, origin);
+        PixelChunk currentChunk = world.GetChunkFrom(origin);
+        (Vector2I current, Vector2I next) = Behaviour.GetSwapPosition(world, currentChunk, this, world.WorldToChunk(origin));
 
-        if (current == next) return; 
+        if (current == next) return;
+
+        PixelChunk nextChunk = world.GetChunkFrom(next);
         
-        //world.ActiveChunks.Add(world.GetChunkFrom(current));
-        //world.ActiveChunks.Add(world.GetChunkFrom(next));
+        world.ActiveChunks.Add(currentChunk);
+        if (currentChunk != nextChunk)
+        {
+            world.ActiveChunks.Add(world.GetChunkFrom(next));
+        }
         
         PixelElement currentPixel = world.GetPixelElementAt(current);
         PixelElement nextPixel = world.GetPixelElementAt(next);
         
-        SetPixelElementAt(world, currentPixel, next);
-        SetPixelElementAt(world, nextPixel, current);
+        world.SetPixelElementAt(next, nextPixel);
+        world.SetPixelElementAt(current, currentPixel);
     }
     
     // This function expects that the origin passed has already been converted to the worldposition beforehand by calling chunk.ToWorldPosition
@@ -160,7 +170,7 @@ public class PixelElement
             Vector2I targetPos = origin + coord * direction;
 
             // Skip if position is out of bounds
-            if (!world.IsInBound(targetPos))
+            if (!world.IsInBoundPixel(targetPos))
                 continue;
 
             PixelElement pixel = world.GetPixelElementAt(targetPos);
