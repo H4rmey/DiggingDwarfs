@@ -28,11 +28,15 @@ public partial class PixelWorld : Node2D
     public Cam Cam;
 
     private BrushNode brushNode;
+    private List<(Vector2I, Vector2I)> Swaps;
+
+    private const bool DEBUG_ENABLE_BORDERS = true;
+    private const bool DEBUG_ENABLE_NEXT_PIXEL = true;
    
     public override void _Ready()
     {
         base._Ready();
-        ChunkCount = new Vector2I(32, 32);
+        ChunkCount = new Vector2I(5, 5);
         ChunkSize = new Vector2I(16, 9);
 
         //Position = new Vector2(0, -10);
@@ -55,6 +59,8 @@ public partial class PixelWorld : Node2D
         Chunks = new PixelChunk[ChunkCount.X, ChunkCount.Y];
         ActiveChunks = new HashSet<PixelChunk>();
         
+        Swaps = new List<(Vector2I, Vector2I)>();
+        
         for (int x = 0; x < ChunkCount.X; x++)
         {
             for (int y = 0; y < ChunkCount.Y; y++)
@@ -71,12 +77,12 @@ public partial class PixelWorld : Node2D
                 //chunk.Scale = PixelSize;
                 chunk.WorldPosition = new Vector2I(x, y);
                 chunk.ParentWorld = this;
-                chunk.IsActive = false;
+                SetChunkInactive(chunk);
                 //DEBUG_RenderChunkBorder(chunk, new Color(1,0,0,0.25f));
                 
                 // place the chunk in the world
                 AddChild(chunk);
-                chunk.DEBUG_DrawBorder(new Color(1,0,0,0.25f));
+                //if (DEBUG_ENABLE_BORDERS) chunk.DEBUG_DrawBorder(new Color(1,0,0,0.25f));
                 Chunks[x, y] = chunk;
             }
         }
@@ -115,8 +121,7 @@ public partial class PixelWorld : Node2D
             if (swap.Count == 0)
             {
                 chunksToRemove.Add(chunk);
-                chunk.IsActive = false;
-                chunk.DEBUG_DrawBorder(new Color(1, 0, 0, 0.25f));
+                //if (DEBUG_ENABLE_BORDERS) chunk.DEBUG_DrawBorder(new Color(1, 0, 0, 0.25f));
                 continue;
             }
 
@@ -125,7 +130,7 @@ public partial class PixelWorld : Node2D
 
         foreach (PixelChunk chunk in chunksToRemove)
         {
-            ActiveChunks.Remove(chunk);
+            SetChunkInactive(chunk);
         }
 
         return swaps;
@@ -287,9 +292,8 @@ public partial class PixelWorld : Node2D
         
         PixelChunk chunk = GetChunkFrom(pos);
         if (chunk == null) return;
-        
-        chunk.IsActive = true;
-        ActiveChunks.Add(chunk);
+
+        SetChunkActive(chunk);
         
         int x = chunk.WorldPosition.X;
         int y = chunk.WorldPosition.Y;
@@ -367,73 +371,41 @@ public partial class PixelWorld : Node2D
     {
         Stopwatch stopwatch = new Stopwatch();
 
-        //stopwatch.Start();
-        List<(Vector2I, Vector2I)> swaps = GetSwapsFromChunks();
-        //stopwatch.Stop();
-        //GD.Print($"GetSwaps Time: {stopwatch.ElapsedMilliseconds} ms");
+        ProcessSwaps(Swaps);
 
-        //GD.Print($"FPS: {Engine.GetFramesPerSecond()}");
-        //GD.Print($"SWP: {swaps.Count}");
+        Swaps.Clear();
 
-        //stopwatch.Restart();
-        ProcessSwaps(swaps);
-        //stopwatch.Stop();
-        //GD.Print($"ProcessSwaps Time: {stopwatch.ElapsedMilliseconds} ms");
+        //DEBUG_RenderActiveChunkBorders(new Color(0, 0, 1, 0.25f));
 
-        swaps.Clear();
-
-        //stopwatch.Restart();
-        DEBUG_RenderActiveChunkBorders(new Color(0, 0, 1, 0.25f));
-        //stopwatch.Stop();
-        //GD.Print($"DEBUG_RenderActiveChunkBorders Time: {stopwatch.ElapsedMilliseconds} ms");
-
-        //stopwatch.Restart();
         UpdateActiveChunks();
-        //stopwatch.Stop();
-        //GD.Print($"SetImagesForChunks Time: {stopwatch.ElapsedMilliseconds} ms");
+        Swaps = GetSwapsFromChunks();
     }
     
     # region MISC
     
-    public Vector2I CamToWorld(Vector2 screenPos)
-    {
-        return new Vector2I((int)screenPos.X, (int)screenPos.Y);
-    }
+    public Vector2I CamToWorld(Vector2 screenPos) { return new Vector2I((int)screenPos.X, (int)screenPos.Y); }
 
-    public Vector2I ViewPortToWorld(Vector2I pos)
-    {
-        return new Vector2I((int)(pos.X/WindowSize.X*WorldSize.X),(int)(pos.Y/WindowSize.Y*WorldSize.Y)); 
-    }
+    public Vector2I ViewPortToWorld(Vector2I pos) { return new Vector2I((int)(pos.X/WindowSize.X*WorldSize.X),(int)(pos.Y/WindowSize.Y*WorldSize.Y)); }
 
     // this functions expects a coordinate in the world not in the viewport
-    public Vector2I WorldToChunk(Vector2I pos)
-    {
-        return new Vector2I( pos.X % ChunkSize.X, pos.Y % ChunkSize.Y);
-    }
+    public Vector2I WorldToChunk(Vector2I pos) { return new Vector2I( pos.X % ChunkSize.X, pos.Y % ChunkSize.Y); }
 
     // checks if a pixel is inbound in the world
     // input is expect to be a coordinate in the world not the viewport
-    public bool IsInBoundPixel(Vector2I pos)
-    {
-        return pos.X >= 0 && pos.X < WorldSize.X && pos.Y >= 0 && pos.Y < WorldSize.Y;
-    }
+    public bool IsInBoundPixel(Vector2I pos) { return pos.X >= 0 && pos.X < WorldSize.X && pos.Y >= 0 && pos.Y < WorldSize.Y; }
     
-    public bool IsInBoundChunk(Vector2I pos)
+    public bool IsInBoundChunk(Vector2I pos) { return pos.X >= 0 && pos.X < ChunkCount.X && pos.Y >= 0 && pos.Y < ChunkCount.Y; }
+
+    public void SetChunkActive(PixelChunk chunk)
     {
-        return pos.X >= 0 && pos.X < ChunkCount.X && pos.Y >= 0 && pos.Y < ChunkCount.Y;
+        chunk.SetIsActive(true);
+        ActiveChunks.Add(chunk);
+    }
+    public void SetChunkInactive(PixelChunk chunk)
+    {
+        chunk.SetIsActive(false);
+        ActiveChunks.Remove(chunk);
     }
 
     # endregion
-    
-    # region DEBUG
-    private void DEBUG_RenderActiveChunkBorders(Color color)
-    {
-        // Only color the border of active chunks
-        foreach (PixelChunk chunk in ActiveChunks)
-        {
-            if (chunk == null) continue;
-            chunk.DEBUG_DrawBorder(color);
-        }
-    }
-    #endregion
 }

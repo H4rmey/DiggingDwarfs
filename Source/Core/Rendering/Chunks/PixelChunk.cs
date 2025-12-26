@@ -8,8 +8,10 @@ using Godot.Collections;
 using SharpDiggingDwarfs.Core.Input.Brushes;
 using SharpDiggingDwarfs.Core.Physics.Elements;
 using SharpDiggingDwarfs.Core.Physics.Factory;
+using SharpDiggingDwarfs.Core.Rendering;
 using SharpDiggingDwarfs.Core.Physics.Behaviors;
 using System.Text.Json;
+using SharpDiggingDwarfs.Source.Core.Rendering;
 
 namespace SharpDiggingDwarfs.Core.Rendering.Chunks;
 
@@ -31,13 +33,14 @@ public partial class PixelChunk : Node2D
     public PixelElement[,] pixels;
 
     public List<(Vector2I, Vector2I)> Swaps = new();
+
+    private const bool DEBUG_DRAW_BORDERS = true;
+    private DebugImage debugBorders;
     
-    public bool IsActive = true;
-    
-    public bool Debug = true;
-    public Image debugImage;
-    public Sprite2D debugSprite;
-    public ImageTexture debugTexture;
+    private const bool DEBUG_DRAW_PIXELS = true;
+    public DebugImage debugPixels;
+
+    private bool IsActive = true;
     
     public override void _Ready()
     {
@@ -55,11 +58,26 @@ public partial class PixelChunk : Node2D
 
         InitPixels();
         InitImage();
-        DEBUG_init();
+
+        if (DEBUG_DRAW_BORDERS)
+        {
+            debugBorders = new DebugImage();
+            debugBorders.init(Size);
+            AddChild(debugBorders);
+            debugBorders.DrawBorder(new Color(1, 0, 0, 0.5f));
+        }
+        if (DEBUG_DRAW_PIXELS)
+        {
+            debugPixels = new DebugImage();
+            debugPixels.init(Size);
+            AddChild(debugPixels);
+        }
     }
     
     public List<(Vector2I, Vector2I)> GetSwapPositions()
     {
+        Vector2I prevPosNext = new Vector2I(0, 0);
+        Vector2I prevPosCurrent = new Vector2I(0, 0);
         Swaps.Clear();
         for (int y = Size.Y-1; y >= 0; y--)
         {
@@ -69,12 +87,32 @@ public partial class PixelChunk : Node2D
                 if (pixelElement == null) continue;
 
                 (Vector2I current, Vector2I next) = pixelElement.GetSwapPosition(ParentWorld, this, new Vector2I(x, y));
-                if (current == next) continue;
+                if (current == next)
+                {
+                    continue; 
+                }
 
+                if (DEBUG_DRAW_PIXELS)
+                {
+                    // TOOD: this code is bad and i should feel bad about it, but it works somehow 
+                    PixelChunk chunkCurrent = ParentWorld.GetChunkFrom(current);
+                    chunkCurrent?.debugPixels.ColorPixel(ParentWorld.WorldToChunk(current), new Color(1,0,1,0.0f));
+                    
+                    PixelChunk chunkNext = ParentWorld.GetChunkFrom(next);
+                    chunkNext?.debugPixels.ColorPixel(ParentWorld.WorldToChunk(next), new Color(0,0,1,0.25f));
+                    
+                    PixelChunk chunkPrevCurrent = ParentWorld.GetChunkFrom(prevPosCurrent);
+                    chunkPrevCurrent?.debugPixels.ColorPixel(ParentWorld.WorldToChunk(prevPosCurrent), Colors.Transparent);
+                    PixelChunk chunkPrevNext = ParentWorld.GetChunkFrom(prevPosNext);
+                    chunkPrevNext?.debugPixels.ColorPixel(ParentWorld.WorldToChunk(prevPosNext), Colors.Transparent);
+                }
+
+                prevPosCurrent = current;
+                //prevPosNext = next;
                 Swaps.Add((current, next));
             }
         }
-
+        
         return Swaps;
     }
     public Vector2I ToWorldPosition(Vector2I pos)
@@ -121,33 +159,9 @@ public partial class PixelChunk : Node2D
         sprite.Texture = texture;
     }
 
-
-    # region DEBUG
-    private void DEBUG_init()
+    public void SetIsActive(bool value)
     {
-        debugSprite = new Sprite2D();
-        debugImage  = new Image();
-        
-        debugImage = Image.CreateEmpty(Size.X, Size.Y, false, Image.Format.Rgba8);
-        debugImage.Fill(Colors.Transparent);
-        debugTexture = ImageTexture.CreateFromImage(debugImage);
-        debugSprite.Texture = debugTexture;
-        AddChild(debugSprite);
+        IsActive = value;
+        if (DEBUG_DRAW_BORDERS) { debugBorders?.DrawBorder((IsActive) ? new Color(0,1,0,0.5f) : new Color(1,0,0,0.5f)); }
     }
-
-    public void DEBUG_DrawBorder(Color color)
-    {
-        for (int x = 0; x < debugImage.GetSize().X; x++)
-        {
-            for (int y = 0; y < debugImage.GetSize().Y; y++)
-            {
-                if (x == 0 || y == 0 || x == Size.X - 1 || y == Size.Y - 1)
-                {
-                    debugImage.SetPixel(x, y, color);
-                }
-            }
-        }
-        debugTexture.Update(debugImage);
-    }
-    # endregion
 }

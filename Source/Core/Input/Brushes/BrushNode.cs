@@ -37,8 +37,8 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
         private Sprite2D previewSprite;
 
         private Vector2 mousePos;
-        private int brushSize = 5;
-        private int pixelType = 2;
+        private int brushSize = 2;
+        private int pixelType = 4;
         
         private bool isPaintHeldDown = false;
         private bool isEraseHeldDown = false;
