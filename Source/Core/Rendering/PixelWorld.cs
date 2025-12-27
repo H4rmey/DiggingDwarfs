@@ -36,7 +36,7 @@ public partial class PixelWorld : Node2D
     public override void _Ready()
     {
         base._Ready();
-        ChunkCount = new Vector2I(5, 5);
+        ChunkCount = new Vector2I(3, 3);
         ChunkSize = new Vector2I(16, 9);
 
         //Position = new Vector2(0, -10);
@@ -203,7 +203,7 @@ public partial class PixelWorld : Node2D
     private void EraseRequestedEventHandler(Vector2I pos, int size)
     {
         pos = CamToWorld(pos);
-        PixelChunk chunk = GetChunkFrom(pos);
+        PixelChunk chunk = GetChunkFromPixelPos(pos);
         ActiveChunks.Add(chunk);
         // Generate all positions within the circle
         for (int x = -size; x <= size; x++)
@@ -230,7 +230,7 @@ public partial class PixelWorld : Node2D
     {
         pos = CamToWorld(pos);
         
-        PixelChunk chunk = GetChunkFrom(pos);
+        PixelChunk chunk = GetChunkFromPixelPos(pos);
         ActiveChunks.Add(chunk);
         
         // Generate all positions within the circle
@@ -255,7 +255,7 @@ public partial class PixelWorld : Node2D
     # region CHUNK
     // returns the chunk at a given world position
     // this functions expects a coordinate in the world not in the viewport
-    public PixelChunk GetChunkFrom(Vector2I pos)
+    public PixelChunk GetChunkFromPixelPos(Vector2I pos)
     {
         //int chunkWidth = WorldSize.X / ChunkCount.X;  
         //int chunkHeight = WorldSize.Y / ChunkCount.Y;
@@ -290,7 +290,7 @@ public partial class PixelWorld : Node2D
     {
         if ( !IsInBoundPixel(pos)) { return; }
         
-        PixelChunk chunk = GetChunkFrom(pos);
+        PixelChunk chunk = GetChunkFromPixelPos(pos);
         if (chunk == null) return;
 
         SetChunkActive(chunk);
@@ -328,7 +328,7 @@ public partial class PixelWorld : Node2D
     // this functions expects a coordinate in the world not in the viewport
     public PixelElement GetPixelElementAt(Vector2I pos)
     {
-        PixelChunk chunk = GetChunkFrom(pos);
+        PixelChunk chunk = GetChunkFromPixelPos(pos);
         if (chunk == null) return null;
 
         // get the local chunk coordinate
@@ -398,13 +398,21 @@ public partial class PixelWorld : Node2D
 
     public void SetChunkActive(PixelChunk chunk)
     {
-        chunk.SetIsActive(true);
+        chunk?.SetIsActive(true);
         ActiveChunks.Add(chunk);
     }
     public void SetChunkInactive(PixelChunk chunk)
     {
         chunk.SetIsActive(false);
         ActiveChunks.Remove(chunk);
+    }
+
+    public PixelChunk GetChunkAt(Vector2I pos)
+    {
+        if (!IsInBoundChunk(pos))
+            return null;
+            
+        return Chunks[pos.X, pos.Y];        
     }
 
     # endregion

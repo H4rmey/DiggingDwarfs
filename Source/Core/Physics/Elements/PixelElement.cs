@@ -135,17 +135,17 @@ public class PixelElement
     
     public void Process(PixelWorld world, Vector2I origin)
     {
-        PixelChunk currentChunk = world.GetChunkFrom(origin);
+        PixelChunk currentChunk = world.GetChunkFromPixelPos(origin);
         (Vector2I current, Vector2I next) = Behaviour.GetSwapPosition(world, currentChunk, this, world.WorldToChunk(origin));
 
         if (current == next) return;
 
-        PixelChunk nextChunk = world.GetChunkFrom(next);
+        PixelChunk nextChunk = world.GetChunkFromPixelPos(next);
         
         world.ActiveChunks.Add(currentChunk);
         if (currentChunk != nextChunk)
         {
-            world.ActiveChunks.Add(world.GetChunkFrom(next));
+            world.ActiveChunks.Add(world.GetChunkFromPixelPos(next));
         }
         
         PixelElement currentPixel = world.GetPixelElementAt(current);

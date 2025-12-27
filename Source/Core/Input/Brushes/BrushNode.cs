@@ -83,10 +83,25 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
         {
             if (@event is InputEventKey keyEvent && keyEvent.Pressed)
             {
+                // Number keys for pixel type
                 int number = (int)keyEvent.Keycode - (int)Key.Key0;
                 if (number > 0 && number < pixels.Length + 1)
                 {
                     pixelType = number - 1;
+                }
+
+                // Ctrl + Plus (both main keyboard and numpad)
+                if (keyEvent.CtrlPressed &&
+                    (keyEvent.Keycode == Key.Equal || keyEvent.Keycode == Key.Plus || keyEvent.Keycode == Key.KpAdd))
+                {
+                    brushSize++;
+                }
+
+                // Ctrl + Minus (main keyboard and numpad)
+                if (keyEvent.CtrlPressed &&
+                    (keyEvent.Keycode == Key.Minus || keyEvent.Keycode == Key.KpSubtract))
+                {
+                    brushSize--;
                 }
             }
 
@@ -94,23 +109,19 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
             {
                 mousePos = GetGlobalMousePosition();
             }
-            
+
             if (!Godot.Input.IsMouseButtonPressed(MouseButton.Left))
-            {
                 isPaintHeldDown = false;
-            }
-        
+
             if (Godot.Input.IsMouseButtonPressed(MouseButton.Left))
             {
                 isPaintHeldDown = true;
                 EmitSignal(SignalName.PaintRequested, mousePos, pixelType, brushSize);
             }
-            
+
             if (!Godot.Input.IsMouseButtonPressed(MouseButton.Right))
-            {
                 isEraseHeldDown = false;
-            }
-        
+
             if (Godot.Input.IsMouseButtonPressed(MouseButton.Right))
             {
                 isEraseHeldDown = true;
@@ -118,14 +129,12 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
             }
 
             if (Godot.Input.IsMouseButtonPressed(MouseButton.WheelUp))
-            {
                 brushSize++;
-            }
+
             if (Godot.Input.IsMouseButtonPressed(MouseButton.WheelDown))
-            {
                 brushSize--;
-            }
         }
+
 
         private Color GetPixelTypeColor()
         {

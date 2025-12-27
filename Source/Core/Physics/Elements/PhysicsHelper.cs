@@ -145,25 +145,18 @@ public class PhysicsHelper
         }
     }
     
-    public bool DoCancelVerticalMotion()
+    public void ResetMotion()
     {
-        if (GD.RandRange(0.0f, 1.0f) < VerticalStability)
-        {
-            CancelVerticalMotion = true;
-            Momentum = 0.0f;
-            MomentumDirection = Vector2I.Zero;
-            return true;
-        }
+        if (VerticalStability > GD.RandRange(0.0f, 1.0f)) { return; }
 
         CancelVerticalMotion = false;
-        
-        return false;
+        CancelHorizontalMotion = false;
     }
 
     public bool DoCancelHorizontalMotion()
     {
         double value = GD.RandRange(0.0f, 1.0f);
-        if (value < HorizontalStability)
+        if (HorizontalStability > value)
         {
             CancelHorizontalMotion = true;
             Momentum = 0.0f;

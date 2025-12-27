@@ -95,15 +95,15 @@ public partial class PixelChunk : Node2D
                 if (DEBUG_DRAW_PIXELS)
                 {
                     // TOOD: this code is bad and i should feel bad about it, but it works somehow 
-                    PixelChunk chunkCurrent = ParentWorld.GetChunkFrom(current);
+                    PixelChunk chunkCurrent = ParentWorld.GetChunkFromPixelPos(current);
                     chunkCurrent?.debugPixels.ColorPixel(ParentWorld.WorldToChunk(current), new Color(1,0,1,0.0f));
                     
-                    PixelChunk chunkNext = ParentWorld.GetChunkFrom(next);
+                    PixelChunk chunkNext = ParentWorld.GetChunkFromPixelPos(next);
                     chunkNext?.debugPixels.ColorPixel(ParentWorld.WorldToChunk(next), new Color(0,0,1,0.25f));
                     
-                    PixelChunk chunkPrevCurrent = ParentWorld.GetChunkFrom(prevPosCurrent);
+                    PixelChunk chunkPrevCurrent = ParentWorld.GetChunkFromPixelPos(prevPosCurrent);
                     chunkPrevCurrent?.debugPixels.ColorPixel(ParentWorld.WorldToChunk(prevPosCurrent), Colors.Transparent);
-                    PixelChunk chunkPrevNext = ParentWorld.GetChunkFrom(prevPosNext);
+                    PixelChunk chunkPrevNext = ParentWorld.GetChunkFromPixelPos(prevPosNext);
                     chunkPrevNext?.debugPixels.ColorPixel(ParentWorld.WorldToChunk(prevPosNext), Colors.Transparent);
                 }
 
