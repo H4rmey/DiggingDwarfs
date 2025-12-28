@@ -12,81 +12,90 @@ using SharpDiggingDwarfs.Core.Rendering;
 using SharpDiggingDwarfs.Core.Physics.Behaviors;
 using System.Text.Json;
 using SharpDiggingDwarfs.Source.Core.Rendering;
+using SharpDiggingDwarfs.Source.Core.Rendering.Chunks;
 
 namespace SharpDiggingDwarfs.Core.Rendering.Chunks;
 
 public partial class PixelChunk : Node2D
 {
-    public Vector2I Size = new Vector2I(32, 18);
-    public Vector2I WorldPosition;
-    public PixelWorld ParentWorld;
+    private Vector2I _size = new Vector2I(32, 18);
+    public Vector2I worldPosition { get; private set; }
+    public PixelWorld parentWorld { get; private set; }
+    private PixelChunkLayerManager _layerManager;
     
-    public Image image;
-    public Sprite2D sprite;
-    public ImageTexture texture;
-    public Vector2I mousePos;
-    public Vector2 viewPortSize;
+    private Vector2I _mousePos;
+    private Vector2 _viewPortSize;
     
-    public StaticBody2D staticBody;
-    
-    // pdg = PixelDataGrid
-    public PixelElement[,] pixels;
+    public PixelElement[,] pixels { get; private set; }
+    private PixelCollision _collision;
 
-    public List<(Vector2I, Vector2I)> Swaps = new();
+    private List<(Vector2I, Vector2I)> _swaps = new();
 
-    private const bool DEBUG_DRAW_BORDERS = true;
+    private const bool DEBUG_DRAW_BORDERS = false;
     private DebugImage debugBorders;
     
-    private const bool DEBUG_DRAW_PIXELS = true;
+    private const bool DEBUG_DRAW_PIXELS = false;
     public DebugImage debugPixels;
 
     private bool IsActive = true;
     
     public override void _Ready()
     {
-        staticBody = new StaticBody2D();
-        sprite     = new Sprite2D();
-        image      = new Image();
-        pixels     = new PixelElement[Size.X, Size.Y];
-        
-        AddChild(sprite);
-        sprite.AddChild(staticBody);
+        _layerManager = new PixelChunkLayerManager();
+        _collision    = new PixelCollision(); 
+        pixels        = new PixelElement[_size.X, _size.Y];
 
-        image = Image.CreateEmpty(Size.X, Size.Y, false, Image.Format.Rgba8);
-        
-        viewPortSize = GetViewport().GetVisibleRect().Size;
+        _viewPortSize = GetViewport().GetVisibleRect().Size;
 
         InitPixels();
-        InitImage();
+        
+        _layerManager.init(_size); 
+        AddChild(_layerManager);
+        AddChild(_collision);
 
         if (DEBUG_DRAW_BORDERS)
         {
             debugBorders = new DebugImage();
-            debugBorders.init(Size);
+            debugBorders.init(_size);
             AddChild(debugBorders);
             debugBorders.DrawBorder(new Color(1, 0, 0, 0.5f));
         }
         if (DEBUG_DRAW_PIXELS)
         {
             debugPixels = new DebugImage();
-            debugPixels.init(Size);
+            debugPixels.init(_size);
             AddChild(debugPixels);
         }
+    }
+
+    public void init(Vector2I size, PixelWorld pixelWorld, Vector2I worldPosition)
+    {
+        _size = size;
+        parentWorld = pixelWorld;
+        this.worldPosition = worldPosition;
+        
+        // place the chunk in the correct position
+        float pos_x = (_size.X * this.worldPosition.X) + _size.X / 2;
+        float pos_y = (_size.Y * this.worldPosition.Y) + _size.Y / 2; 
+        Position = new Vector2(pos_x, pos_y);
+        
+        //chunk.Scale = PixelSize;
+        //DEBUG_RenderChunkBorder(chunk, new Color(1,0,0,0.25f));
     }
     
     public List<(Vector2I, Vector2I)> GetSwapPositions()
     {
         Vector2I prevPosNext = new Vector2I(0, 0);
         Vector2I prevPosCurrent = new Vector2I(0, 0);
-        Swaps.Clear();
-        for (int y = Size.Y-1; y >= 0; y--)
+        _swaps.Clear();
+        for (int y = _size.Y-1; y >= 0; y--)
         {
-            for (int x = Size.X-1; x >= 0; x--)
+            for (int x = _size.X-1; x >= 0; x--)
             {
                 PixelElement pixelElement = pixels[x, y];
                 if (pixelElement == null) continue;
 
-                (Vector2I current, Vector2I next) = pixelElement.GetSwapPosition(ParentWorld, this, new Vector2I(x, y));
+                (Vector2I current, Vector2I next) = pixelElement.GetSwapPosition(parentWorld, this, new Vector2I(x, y));
                 if (current == next)
                 {
                     continue; 
@@ -95,73 +104,71 @@ public partial class PixelChunk : Node2D
                 if (DEBUG_DRAW_PIXELS)
                 {
                     // TOOD: this code is bad and i should feel bad about it, but it works somehow 
-                    PixelChunk chunkCurrent = ParentWorld.GetChunkFromPixelPos(current);
-                    chunkCurrent?.debugPixels.ColorPixel(ParentWorld.WorldToChunk(current), new Color(1,0,1,0.0f));
+                    PixelChunk chunkCurrent = parentWorld.GetChunkFromPixelPos(current);
+                    chunkCurrent?.debugPixels.ColorPixel(parentWorld.WorldToChunk(current), new Color(1,0,1,0.0f));
                     
-                    PixelChunk chunkNext = ParentWorld.GetChunkFromPixelPos(next);
-                    chunkNext?.debugPixels.ColorPixel(ParentWorld.WorldToChunk(next), new Color(0,0,1,0.25f));
+                    PixelChunk chunkNext = parentWorld.GetChunkFromPixelPos(next);
+                    chunkNext?.debugPixels.ColorPixel(parentWorld.WorldToChunk(next), new Color(0,0,1,0.25f));
                     
-                    PixelChunk chunkPrevCurrent = ParentWorld.GetChunkFromPixelPos(prevPosCurrent);
-                    chunkPrevCurrent?.debugPixels.ColorPixel(ParentWorld.WorldToChunk(prevPosCurrent), Colors.Transparent);
-                    PixelChunk chunkPrevNext = ParentWorld.GetChunkFromPixelPos(prevPosNext);
-                    chunkPrevNext?.debugPixels.ColorPixel(ParentWorld.WorldToChunk(prevPosNext), Colors.Transparent);
+                    PixelChunk chunkPrevCurrent = parentWorld.GetChunkFromPixelPos(prevPosCurrent);
+                    chunkPrevCurrent?.debugPixels.ColorPixel(parentWorld.WorldToChunk(prevPosCurrent), Colors.Transparent);
+                    PixelChunk chunkPrevNext = parentWorld.GetChunkFromPixelPos(prevPosNext);
+                    chunkPrevNext?.debugPixels.ColorPixel(parentWorld.WorldToChunk(prevPosNext), Colors.Transparent);
                 }
 
                 prevPosCurrent = current;
                 //prevPosNext = next;
-                Swaps.Add((current, next));
+                _swaps.Add((current, next));
             }
         }
         
-        return Swaps;
-    }
-    public Vector2I ToWorldPosition(Vector2I pos)
-    {
-        return new Vector2I(Size.X * WorldPosition.X + pos.X, Size.Y * WorldPosition.Y + pos.Y);
+        return _swaps;
     }
 
-    public void SetPixel(Vector2I pos, PixelElement pix)
+    public void UpdateLayers()
+    {
+        _layerManager.UpdateLayers();
+    }
+
+    public void ColorPixel(Vector2I pos, PixelElement pixel)
     {
         if (!IsInBound(pos)) return;
         
-        pix.SetRandomColor();
-        pixels[pos.X, pos.Y] = pix;
-        image.SetPixelv(pos, pix.Color);
+        pixel.SetRandomColor();
+        pixels[pos.X, pos.Y] = pixel;
+        _layerManager.ColorPixel(pos, pixel);
     }
 
     public bool IsInBound(Vector2I pos)
     {
-        return pos.X >= 0 && pos.X < Size.X && pos.Y >= 0 && pos.Y < Size.Y;
+        return pos.X >= 0 && pos.X < _size.X && pos.Y >= 0 && pos.Y < _size.Y;
+    }
+
+    public Vector2I ToWorldPosition(Vector2I pos)
+    {
+        return new Vector2I(_size.X * worldPosition.X + pos.X, _size.Y * worldPosition.Y + pos.Y);
     }
 
     private void InitPixels()
     {
-        for (int x = 0; x < Size.X; x++)
+        for (int x = 0; x < _size.X; x++)
         {
-            for (int y = 0; y < Size.Y; y++)
+            for (int y = 0; y < _size.Y; y++)
             {
                 pixels[x, y] = PixelFactory.CreateAir();
             }
         }
     }
 
-    private void InitImage()
-    {
-        image.Fill(PixelFactory.CreateAir().Color);
-        for (int x = 0; x < Size.X; x++)
-        {
-            for (int y = 0; y < Size.Y; y++)
-            {
-                image.SetPixel(x, y, pixels[x, y].Color);
-            }
-        }
-        texture = ImageTexture.CreateFromImage(image);
-        sprite.Texture = texture;
-    }
-
     public void SetIsActive(bool value)
     {
         IsActive = value;
         if (DEBUG_DRAW_BORDERS) { debugBorders?.DrawBorder((IsActive) ? new Color(0,1,0,0.5f) : new Color(1,0,0,0.5f)); }
+    }
+
+
+    public void UpdateCollisions()
+    {
+        _collision.Update(_layerManager.GetLayerImage(PixelType.Solid));
     }
 }

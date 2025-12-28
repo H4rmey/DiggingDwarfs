@@ -13,6 +13,8 @@ namespace SharpDiggingDwarfs.Core.Physics.Behaviors;
 /// </summary>
 public class SolidBehaviour : IPixelBehaviour
 {
+    public PixelType Type => PixelType.Solid; 
+    
     public void InitializePhysics(PixelElement pixel)
     {
         pixel.Physics = new PhysicsHelper
@@ -55,7 +57,7 @@ public class SolidBehaviour : IPixelBehaviour
         
         if (pixel.Physics.CancelVerticalMotion) return (origin, origin);
         //if (pixel.Physics.DoCancelVerticalMotion()) return (origin, origin);
-
+        
         origin = chunk.ToWorldPosition(origin);
         Vector2I nextPos = new Vector2I(origin.X, origin.Y + 1);
         
@@ -75,8 +77,8 @@ public class SolidBehaviour : IPixelBehaviour
                 {
                     Vector2I above = pos + Vector2I.Up;
                     Vector2I below = pos + Vector2I.Down;
-                    if (world.GetPixelElementAt(above)?.Type == PixelType.Solid &
-                        world.GetPixelElementAt(below)?.Type == PixelType.Solid)
+                    if (world.GetPixelElementAt(above)?.Behaviour.Type == PixelType.Solid &&
+                        world.GetPixelElementAt(below)?.Behaviour.Type == PixelType.Solid)
                     {
                         adjacentPixel.Physics.ResetMotion();
                     }

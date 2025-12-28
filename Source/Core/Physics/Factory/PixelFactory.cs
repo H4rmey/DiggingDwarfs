@@ -19,7 +19,6 @@ public static class PixelFactory
     {
         var pixel = new PixelElement
         {
-            Type            = PixelType.Empty,
             Behaviour       = new EmptyBehaviour(),
             VisualBehavior  = new AirVisualBehavior()
         };
@@ -42,7 +41,6 @@ public static class PixelFactory
     {
         var pixel = new PixelElement
         {
-            Type = PixelType.Solid,
             Behaviour = new SolidBehaviour(),
             VisualBehavior = new SolidVisualBehavior()
         };
@@ -65,7 +63,6 @@ public static class PixelFactory
     {
         var pixel = new PixelElement
         {
-            Type = PixelType.Liquid,
             Behaviour = new LiquidBehaviour(),
             VisualBehavior = new LiquidVisualBehavior()
         };
@@ -88,7 +85,6 @@ public static class PixelFactory
     {
         var pixel = new PixelElement
         {
-            Type = PixelType.Solid, // Scaffoldings use solid state but with different behavior
             Behaviour = new ScaffoldingBehaviour(),
             VisualBehavior = new ScaffoldingVisualBehaviour() // Reuse solid visual for now
         };

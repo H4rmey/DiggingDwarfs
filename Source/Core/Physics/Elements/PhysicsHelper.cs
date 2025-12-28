@@ -9,6 +9,15 @@ namespace SharpDiggingDwarfs.Core.Physics.Elements;
 /// </summary>
 public class PhysicsHelper
 {
+    public enum PixelType
+    {
+        Empty,
+        Solid,
+        Liquid,
+        Gas,
+        Scaffolding
+    }
+    
     public virtual PhysicsHelper Clone()
     {
         PhysicsHelper clone = (PhysicsHelper)MemberwiseClone();

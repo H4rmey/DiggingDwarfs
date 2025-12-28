@@ -13,6 +13,8 @@ namespace SharpDiggingDwarfs.Core.Physics.Behaviors;
 /// </summary>
 public class LiquidBehaviour : IPixelBehaviour
 {
+    public PixelType Type => PixelType.Liquid; 
+    
     private int maxCheckTimes = 5000;
     public void InitializePhysics(PixelElement pixel)
     {
@@ -69,10 +71,10 @@ public class LiquidBehaviour : IPixelBehaviour
 
         // activate side chunk if a side pixel is processed. 
         // this is done to fix the issue where settled water becomes a solid block
-        Vector2I left = chunk.WorldPosition + Vector2I.Left;
-        Vector2I right = chunk.WorldPosition + Vector2I.Right;
+        Vector2I left = chunk.worldPosition + Vector2I.Left;
+        Vector2I right = chunk.worldPosition + Vector2I.Right;
         if (origin.X == 0)                   world.SetChunkActive(world.GetChunkAt(left));
-        if (origin.X == world.ChunkSize.X-1) world.SetChunkActive(world.GetChunkAt(right));
+        if (origin.X == world.chunkSize.X-1) world.SetChunkActive(world.GetChunkAt(right));
 
         origin = chunk.ToWorldPosition(origin);
         Vector2I nextPos = new Vector2I(origin.X, origin.Y + 1);

@@ -9,6 +9,8 @@ namespace SharpDiggingDwarfs.Core.Physics.Behaviors.Interfaces;
 /// </summary>
 public interface IPixelBehaviour
 {
+    public PixelType Type { get; }
+    
     /// <summary>
     /// Updates the physics state of the pixel using its statistics and enforcers
     /// </summary>

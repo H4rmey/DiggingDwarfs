@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using Godot;
 using SharpDiggingDwarfs.Core.Physics.Elements;
 using SharpDiggingDwarfs.Core.Rendering.Chunks;
@@ -14,6 +11,8 @@ namespace SharpDiggingDwarfs.Core.Physics.Behaviors;
 /// </summary>
 public class ScaffoldingBehaviour : IPixelBehaviour
 {
+    public PixelType Type => PixelType.Scaffolding; 
+    
     public int MaxVerticalChain = 10;
     public int MaxHorizontalChain = 5;
     public bool IsVerticalStable = false;
@@ -37,7 +36,6 @@ public class ScaffoldingBehaviour : IPixelBehaviour
             Momentum = 0f,
             MomentumDirection = Vector2I.Zero
         };
-        pixel.Type = PixelType.Scaffolding;
     }
 
     public void UpdatePhysics(PixelElement pixel)
@@ -54,6 +52,18 @@ public class ScaffoldingBehaviour : IPixelBehaviour
 
     public (Vector2I Current, Vector2I Next) GetSwapPosition(PixelWorld world, PixelChunk chunk, PixelElement pixel, Vector2I origin)
     {
+
+        // activate side chunk if a side pixel is processed. 
+        // this is done to fix the issue where settled water becomes a solid block
+        Vector2I up = chunk.worldPosition + Vector2I.Up;
+        Vector2I down = chunk.worldPosition + Vector2I.Down;
+        Vector2I left = chunk.worldPosition + Vector2I.Left;
+        Vector2I right = chunk.worldPosition + Vector2I.Right;
+        if (origin.X == 0)                   world.SetChunkActive(world.GetChunkAt(left));
+        if (origin.X == world.chunkSize.X-1) world.SetChunkActive(world.GetChunkAt(right));
+        if (origin.Y == 0)                   world.SetChunkActive(world.GetChunkAt(up));
+        if (origin.Y == world.chunkSize.Y-1) world.SetChunkActive(world.GetChunkAt(down));
+        
         origin = chunk.ToWorldPosition(origin);
         Vector2I nextPos = new Vector2I(origin.X, origin.Y + 1);
         
@@ -67,7 +77,7 @@ public class ScaffoldingBehaviour : IPixelBehaviour
         }
 
         // Check if this pixel has a SOLID or out of bounds below it - makes it an Anchor Pixel
-        if (belowPixel == null || belowPixel.Type == PixelType.Solid || !world.IsInBoundPixel(nextPos))
+        if (belowPixel == null || belowPixel.Behaviour.Type == PixelType.Solid || !world.IsInBoundPixel(nextPos))
         {
             IsAnchor = true;
             IsVerticalStable = true;
@@ -140,7 +150,7 @@ public class ScaffoldingBehaviour : IPixelBehaviour
             PixelElement checkPixel = world.GetPixelElementAt(new Vector2I(checkX, origin.Y));
             
             // Check if the pixel is scaffolding
-            if (checkPixel != null && checkPixel.Type == PixelType.Scaffolding && checkPixel.Behaviour is ScaffoldingBehaviour scaffolding)
+            if (checkPixel != null && checkPixel.Behaviour.Type == PixelType.Scaffolding && checkPixel.Behaviour is ScaffoldingBehaviour scaffolding)
             {
                 // Check if this scaffolding pixel has another scaffolding pixel below it and is vertically stable
                 PixelElement belowCheckPixel = null;
@@ -151,8 +161,8 @@ public class ScaffoldingBehaviour : IPixelBehaviour
                 
                 if (scaffolding.IsVerticalStable &&
                     (belowCheckPixel == null ||
-                     belowCheckPixel.Type == PixelType.Scaffolding ||
-                     belowCheckPixel.Type == PixelType.Solid))
+                     belowCheckPixel.Behaviour.Type == PixelType.Scaffolding ||
+                     belowCheckPixel.Behaviour.Type == PixelType.Solid))
                 {
                     foundStable = true;
                     break;
@@ -183,14 +193,14 @@ public class ScaffoldingBehaviour : IPixelBehaviour
                 
             PixelElement checkPixel = chunk.pixels[origin.X, origin.Y + i];
             
-            if (checkPixel != null && checkPixel.Type == PixelType.Scaffolding)
+            if (checkPixel != null && checkPixel.Behaviour.Type == PixelType.Scaffolding)
             {
                 if (checkPixel.Behaviour is ScaffoldingBehaviour scaffolding && scaffolding.IsAnchor)
                 {
                     return true;
                 }
             }
-            else if (checkPixel != null && checkPixel.Type == PixelType.Solid)
+            else if (checkPixel != null && checkPixel.Behaviour.Type == PixelType.Solid)
             {
                 return true;
             }

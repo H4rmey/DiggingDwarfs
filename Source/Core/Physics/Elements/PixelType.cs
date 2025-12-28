@@ -4,7 +4,6 @@ public enum PixelType
 {
     Empty,
     Solid,
-    Falling,
     Liquid,
     Gas,
     Scaffolding

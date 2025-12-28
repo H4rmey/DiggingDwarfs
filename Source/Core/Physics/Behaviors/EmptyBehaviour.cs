@@ -11,6 +11,8 @@ namespace SharpDiggingDwarfs.Core.Physics.Behaviors;
 /// </summary>
 public class EmptyBehaviour : IPixelBehaviour
 {
+    public PixelType Type => PixelType.Empty; 
+    
     public void InitializePhysics(PixelElement pixel)
     {
         pixel.Physics = new PhysicsHelper

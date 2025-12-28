@@ -15,7 +15,6 @@ public class PixelElement
     public delegate void PixelAction(PixelElement pixel, Vector2I position);
     
     // Core visual properties
-    public PixelType Type;
     public Color BaseColor;
     public Color Color;
 
@@ -30,7 +29,6 @@ public class PixelElement
     {
         BaseColor = Colors.Purple;
         Color     = Colors.Purple;
-        Type      = PixelType.Empty;
         
         // Initialize the physics system with default empty values
         Physics = new PhysicsHelper
@@ -133,27 +131,27 @@ public class PixelElement
         }
     }
     
-    public void Process(PixelWorld world, Vector2I origin)
-    {
-        PixelChunk currentChunk = world.GetChunkFromPixelPos(origin);
-        (Vector2I current, Vector2I next) = Behaviour.GetSwapPosition(world, currentChunk, this, world.WorldToChunk(origin));
+    //public void Process(PixelWorld world, Vector2I origin)
+    //{
+    //    PixelChunk currentChunk = world.GetChunkFromPixelPos(origin);
+    //    (Vector2I current, Vector2I next) = Behaviour.GetSwapPosition(world, currentChunk, this, world.WorldToChunk(origin));
 
-        if (current == next) return;
+    //    if (current == next) return;
 
-        PixelChunk nextChunk = world.GetChunkFromPixelPos(next);
-        
-        world.ActiveChunks.Add(currentChunk);
-        if (currentChunk != nextChunk)
-        {
-            world.ActiveChunks.Add(world.GetChunkFromPixelPos(next));
-        }
-        
-        PixelElement currentPixel = world.GetPixelElementAt(current);
-        PixelElement nextPixel = world.GetPixelElementAt(next);
-        
-        world.SetPixelElementAt(next, nextPixel);
-        world.SetPixelElementAt(current, currentPixel);
-    }
+    //    PixelChunk nextChunk = world.GetChunkFromPixelPos(next);
+    //    
+    //    world._activeChunks.Add(currentChunk);
+    //    if (currentChunk != nextChunk)
+    //    {
+    //        world._activeChunks.Add(world.GetChunkFromPixelPos(next));
+    //    }
+    //    
+    //    PixelElement currentPixel = world.GetPixelElementAt(current);
+    //    PixelElement nextPixel = world.GetPixelElementAt(next);
+    //    
+    //    world.SetPixelElementAt(next, nextPixel);
+    //    world.SetPixelElementAt(current, currentPixel);
+    //}
     
     // This function expects that the origin passed has already been converted to the worldposition beforehand by calling chunk.ToWorldPosition
     // TODO: Figure out if this is the way to go or let the function convert it to worldposition
@@ -182,7 +180,7 @@ public class PixelElement
                 firstValidPosition = targetPos;
                 break;
             }
-            else if (pixel.Type != PixelType.Liquid )
+            else if (pixel.Behaviour.Type != PixelType.Liquid )
             {
                 break;
             }

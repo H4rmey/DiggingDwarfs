@@ -37,8 +37,8 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
         private Sprite2D previewSprite;
 
         private Vector2 mousePos;
-        private int brushSize = 2;
-        private int pixelType = 4;
+        private int brushSize = 0;
+        private int pixelType = 2;
         
         private bool isPaintHeldDown = false;
         private bool isEraseHeldDown = false;
@@ -50,14 +50,14 @@ namespace SharpDiggingDwarfs.Core.Input.Brushes
             PixelFactory.CreateScaffolding(),
             PixelFactory.CreateSolid()
         ];
-        
-        public override void _Ready()
+
+        public void init(Vector2I worldSize, Vector2 pixelSize, Vector2 windowSize)
         {
             previewSprite = new Sprite2D();
-            previewImage = Image.CreateEmpty((int)ParentWorld.WorldSize.X, (int)ParentWorld.WorldSize.Y, false, Image.Format.Rgba8);
+            previewImage = Image.CreateEmpty((int)worldSize.X, (int)worldSize.Y, false, Image.Format.Rgba8);
             previewImage.Fill(Colors.Transparent);
 
-            Position = new Vector2(ParentWorld.WindowSize.X/(ParentWorld.PixelSize.X*2), ParentWorld.WindowSize.Y/(ParentWorld.PixelSize.Y*2));
+            Position = new Vector2(windowSize.X/(pixelSize.X*2), windowSize.Y/(pixelSize.Y*2)-1);
             
             AddChild(previewSprite);
             previewSprite.Texture = ImageTexture.CreateFromImage(previewImage);
