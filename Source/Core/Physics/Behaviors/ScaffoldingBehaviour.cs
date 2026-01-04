@@ -50,7 +50,7 @@ public class ScaffoldingBehaviour : IPixelBehaviour
         return !IsVerticalStable || !IsHorizontalStable;
     }
 
-    public (Vector2I Current, Vector2I Next) GetSwapPosition(PixelWorld world, PixelChunk chunk, PixelElement pixel, Vector2I origin)
+    public (Vector2I Current, Vector2I Next) GetSwapPosition(PixelWorld world, PixelChunk chunk, PixelElement pixel, Vector2I CurrentPositionInChunk)
     {
 
         // activate side chunk if a side pixel is processed. 
@@ -59,13 +59,13 @@ public class ScaffoldingBehaviour : IPixelBehaviour
         Vector2I down = chunk.worldPosition + Vector2I.Down;
         Vector2I left = chunk.worldPosition + Vector2I.Left;
         Vector2I right = chunk.worldPosition + Vector2I.Right;
-        if (origin.X == 0)                   world.SetChunkActive(world.GetChunkAt(left));
-        if (origin.X == world.chunkSize.X-1) world.SetChunkActive(world.GetChunkAt(right));
-        if (origin.Y == 0)                   world.SetChunkActive(world.GetChunkAt(up));
-        if (origin.Y == world.chunkSize.Y-1) world.SetChunkActive(world.GetChunkAt(down));
+        if (CurrentPositionInChunk.X == 0)                   world.SetChunkActive(world.GetChunkAt(left));
+        if (CurrentPositionInChunk.X == world.chunkSize.X-1) world.SetChunkActive(world.GetChunkAt(right));
+        if (CurrentPositionInChunk.Y == 0)                   world.SetChunkActive(world.GetChunkAt(up));
+        if (CurrentPositionInChunk.Y == world.chunkSize.Y-1) world.SetChunkActive(world.GetChunkAt(down));
         
-        origin = chunk.ToWorldPosition(origin);
-        Vector2I nextPos = new Vector2I(origin.X, origin.Y + 1);
+        CurrentPositionInChunk = chunk.ToWorldPosition(CurrentPositionInChunk);
+        Vector2I nextPos = new Vector2I(CurrentPositionInChunk.X, CurrentPositionInChunk.Y + 1);
         
         // Initialize pixel references to null to avoid unassigned variable errors
         PixelElement belowPixel = null;
@@ -81,7 +81,7 @@ public class ScaffoldingBehaviour : IPixelBehaviour
         {
             IsAnchor = true;
             IsVerticalStable = true;
-            return (origin, origin);
+            return (CurrentPositionInChunk, CurrentPositionInChunk);
         }
 
         // Check if this pixel lands on top of an anchor pixel or vertically stable pixel
@@ -90,22 +90,22 @@ public class ScaffoldingBehaviour : IPixelBehaviour
             if (belowScaffolding.IsAnchor || belowScaffolding.IsVerticalStable)
             {
                 IsVerticalStable = true;
-                return (origin, origin);
+                return (CurrentPositionInChunk, CurrentPositionInChunk);
             }
         }
 
-        if (CheckHorizontalStability(world, chunk, origin, -1))
+        if (CheckHorizontalStability(world, chunk, CurrentPositionInChunk, -1))
         {
             IsHorizontalStable = true;
             IsVerticalStable = true;
-            return (origin, origin);
+            return (CurrentPositionInChunk, CurrentPositionInChunk);
         }
 
-        if (CheckHorizontalStability(world, chunk, origin, 1))
+        if (CheckHorizontalStability(world, chunk, CurrentPositionInChunk, 1))
         {
             IsHorizontalStable = true;
             IsVerticalStable = true;
-            return (origin, origin);
+            return (CurrentPositionInChunk, CurrentPositionInChunk);
         }
 
         // Check vertical chain stability
@@ -121,12 +121,12 @@ public class ScaffoldingBehaviour : IPixelBehaviour
             PixelElement targetPixel = world.GetPixelElementAt(nextPos);
             if (targetPixel != null && targetPixel.IsEmpty(pixel))
             {
-                return (origin, nextPos);
+                return (CurrentPositionInChunk, nextPos);
             }
         }
 
         // Can't move anywhere
-        return (origin, origin);
+        return (CurrentPositionInChunk, CurrentPositionInChunk);
     }
 
     /// <summary>

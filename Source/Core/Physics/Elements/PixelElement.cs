@@ -24,6 +24,11 @@ public class PixelElement
     // Unified behavior component
     public IPixelBehaviour Behaviour { get; set; }
     public IVisualBehavior VisualBehavior { get; set; }
+    
+    public bool IsActive { get; set; }
+    
+    public Vector2I chunkPosition { get; private set; }
+    public Vector2I worldPosition { get; private set; }
 
     public PixelElement()
     {
@@ -52,6 +57,8 @@ public class PixelElement
         Physics.HorizontalStability = randomFriction;
         Physics.VerticalStability = randomFriction;
         GD.Randomize();
+        SetRandomColor();
+        IsActive = true;
     }
     
     public virtual bool IsEmpty(PixelElement element)
@@ -59,14 +66,27 @@ public class PixelElement
         return element.Physics.Mass > Physics.Mass;
     }
     
-    public virtual (Vector2I Current, Vector2I Next) GetSwapPosition(PixelWorld world, PixelChunk chunk, Vector2I origin)
+    public virtual (Vector2I Current, Vector2I Next) GetSwapPosition(PixelWorld world, PixelChunk chunk, Vector2I CurrentPositionInChunk)
     {
-        return Behaviour?.GetSwapPosition(world, chunk, this, origin) ?? (origin, origin);
+        if (IsActive)
+        {
+            return Behaviour?.GetSwapPosition(world, chunk, this, CurrentPositionInChunk) ?? (CurrentPositionInChunk, CurrentPositionInChunk);
+        }
+        return (CurrentPositionInChunk, CurrentPositionInChunk);
     }
 
-    public virtual void SetRandomColor()
+    public virtual void SetRandomColor() { VisualBehavior?.SetRandomColor(this); }
+
+    public void SetPosition_World(PixelWorld world, Vector2I worldPos)
     {
-        VisualBehavior?.SetRandomColor(this);
+        worldPosition = worldPos;
+        chunkPosition = world.WorldToChunk(worldPos);
+    }
+
+    public void SetPosition_Chunk(PixelChunk chunk, Vector2I chunkPos)
+    {
+        worldPosition = chunk.ToWorldPosition(chunkPos);
+        chunkPosition = chunkPos;
     }
 
     public virtual PixelElement Clone()
@@ -90,6 +110,7 @@ public class PixelElement
         {
             // Invoke the action on the found pixel
             action?.Invoke(pixel, executePos);
+            //pixel.IsActive = true;
         }
     }
 

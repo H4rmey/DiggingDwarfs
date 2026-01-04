@@ -20,11 +20,11 @@ public interface IPixelBehaviour
     /// <summary>
     /// Determines the next position for a pixel based on its current position and the chunk state
     /// </summary>
-    /// <param name="origin">Current position of the pixel, must be local to the chunk</param>
+    /// <param name="CurrentPositionInChunk">Current position of the pixel, must be local to the chunk</param>
     /// <param name="chunk">The pixel chunk containing the simulation state</param>
     /// <param name="pixel">The pixel element that is moving</param>
     /// <returns>A tuple containing the current position and the desired next position</returns>
-    (Vector2I Current, Vector2I Next) GetSwapPosition(PixelWorld pixelWorld, PixelChunk pixelChunk, PixelElement pixel, Vector2I origin);
+    (Vector2I Current, Vector2I Next) GetSwapPosition(PixelWorld pixelWorld, PixelChunk pixelChunk, PixelElement pixel, Vector2I CurrentPositionInChunk);
     
     /// <summary>
     /// Determines if the pixel should be falling based on its current state and enforcers

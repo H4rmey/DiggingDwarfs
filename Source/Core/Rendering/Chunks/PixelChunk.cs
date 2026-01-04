@@ -38,12 +38,14 @@ public partial class PixelChunk : Node2D
     public DebugImage debugPixels;
 
     private bool IsActive = true;
+    private PixelDirtyRect _pixelDirtyRect;
     
     public override void _Ready()
     {
-        _layerManager = new PixelChunkLayerManager();
-        _collision    = new PixelCollision(); 
-        pixels        = new PixelElement[_size.X, _size.Y];
+        _layerManager   = new PixelChunkLayerManager();
+        _collision      = new PixelCollision(); 
+        pixels          = new PixelElement[_size.X, _size.Y];
+        _pixelDirtyRect = new PixelDirtyRect(this);
 
         _viewPortSize = GetViewport().GetVisibleRect().Size;
 
@@ -51,6 +53,7 @@ public partial class PixelChunk : Node2D
         
         _layerManager.init(_size); 
         AddChild(_layerManager);
+        _collision.Position = new Vector2I(-_size.X / 2, -_size.Y / 2);
         AddChild(_collision);
 
         if (DEBUG_DRAW_BORDERS)
@@ -82,8 +85,31 @@ public partial class PixelChunk : Node2D
         //chunk.Scale = PixelSize;
         //DEBUG_RenderChunkBorder(chunk, new Color(1,0,0,0.25f));
     }
-    
-    public List<(Vector2I, Vector2I)> GetSwapPositions()
+
+    public List<(Vector2I, Vector2I)> GetSwapPositionsDirtyRect()
+    {
+        foreach (Vector2I position in _pixelDirtyRect.activePixelPositions.ToArray())
+        {
+            int x = position.X;
+            int y = position.Y;
+            
+            PixelElement pixel = pixels[x, y];
+            
+            (Vector2I current, Vector2I next) = pixel.GetSwapPosition(parentWorld, this, pixel.chunkPosition);
+
+            if (current == next)
+            {
+                //_pixelDirtyRect.SetPixelInactive(current);
+                continue;
+            }
+
+            _swaps.Add((current, next));
+        }
+        
+        return _swaps;
+    }
+
+    public List<(Vector2I, Vector2I)> GetSwapPositionsAll()
     {
         Vector2I prevPosNext = new Vector2I(0, 0);
         Vector2I prevPosCurrent = new Vector2I(0, 0);
@@ -130,23 +156,29 @@ public partial class PixelChunk : Node2D
         _layerManager.UpdateLayers();
     }
 
-    public void ColorPixel(Vector2I pos, PixelElement pixel)
+    public void UpdatePixel(Vector2I positionInChunk, PixelElement pixel, bool isActive)
     {
-        if (!IsInBound(pos)) return;
+        if (!IsInBound(positionInChunk)) return;
         
-        pixel.SetRandomColor();
-        pixels[pos.X, pos.Y] = pixel;
-        _layerManager.ColorPixel(pos, pixel);
+        //pixel.SetRandomColor();
+        pixels[positionInChunk.X, positionInChunk.Y] = pixel;
+        _layerManager.ColorPixel(positionInChunk, pixel);
+        pixel.SetPosition_Chunk(this, positionInChunk);
+        
+        if (isActive)
+            _pixelDirtyRect.SetPixelActive(positionInChunk);
+        else
+            _pixelDirtyRect.SetPixelInactive(positionInChunk);
     }
 
-    public bool IsInBound(Vector2I pos)
+    public bool IsInBound(Vector2I positionInChunk)
     {
-        return pos.X >= 0 && pos.X < _size.X && pos.Y >= 0 && pos.Y < _size.Y;
+        return positionInChunk.X >= 0 && positionInChunk.X < _size.X && positionInChunk.Y >= 0 && positionInChunk.Y < _size.Y;
     }
 
-    public Vector2I ToWorldPosition(Vector2I pos)
+    public Vector2I ToWorldPosition(Vector2I positionInChunk)
     {
-        return new Vector2I(_size.X * worldPosition.X + pos.X, _size.Y * worldPosition.Y + pos.Y);
+        return new Vector2I(_size.X * worldPosition.X + positionInChunk.X, _size.Y * worldPosition.Y + positionInChunk.Y);
     }
 
     private void InitPixels()
@@ -156,6 +188,7 @@ public partial class PixelChunk : Node2D
             for (int y = 0; y < _size.Y; y++)
             {
                 pixels[x, y] = PixelFactory.CreateAir();
+                _pixelDirtyRect.SetPixelInactive(new Vector2I(x,y));
             }
         }
     }

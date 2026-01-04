@@ -31,7 +31,7 @@ public partial class PixelWorld : Node2D
     public override void _Ready()
     {
         base._Ready();
-        _chunkCount = new Vector2I(5, 5);
+        _chunkCount = new Vector2I(1, 1);
         chunkSize = new Vector2I(16, 9);
 
         //Position = new Vector2(0, -10);
@@ -90,7 +90,7 @@ public partial class PixelWorld : Node2D
     public override void _PhysicsProcess(double delta)
     {
         base._PhysicsProcess(delta);
-        RefreshFrame();
+        //RefreshFrame();
     }
     
     # region SWAPS
@@ -103,7 +103,8 @@ public partial class PixelWorld : Node2D
         foreach (PixelChunk chunk in _activeChunks.ToList())
         {
             if (chunk == null) continue;
-            List<(Vector2I, Vector2I)> swap = chunk.GetSwapPositions();
+            //List<(Vector2I, Vector2I)> swap = chunk.GetSwapPositionsAll();
+            List<(Vector2I, Vector2I)> swap = chunk.GetSwapPositionsAll();
             if (swap.Count == 0)
             {
                 chunksToRemove.Add(chunk);
@@ -155,11 +156,10 @@ public partial class PixelWorld : Node2D
     public void SwapPixels(Vector2I current, Vector2I next)
     {
         PixelElement currentPixel = GetPixelElementAt(current);
-        PixelElement nextPixel = GetPixelElementAt(next);
+        PixelElement nextPixel    = GetPixelElementAt(next);
         
-        SetPixelElementAt(next, currentPixel);
-        SetPixelElementAt(current, nextPixel);
-        
+        SetPixelElementAt(next, currentPixel, true);
+        SetPixelElementAt(current, nextPixel, true);
     }
     # endregion
 
@@ -205,7 +205,7 @@ public partial class PixelWorld : Node2D
                     
                     if (!IsInBoundPixel(p)) continue;
                     
-                    SetPixelElementAt(p, PixelFactory.CreateAir());
+                    //SetPixelElementAt(p, PixelFactory.CreateAir(), false);
                 }
             }
         }
@@ -229,8 +229,10 @@ public partial class PixelWorld : Node2D
                 float distance = Mathf.Sqrt(x * x + y * y);
                 if (distance <= size)
                 {
-                    Vector2I p = new Vector2I(pos.X + x, pos.Y +  y);
-                    SetPixelElementAt(p, _brushNode.pixels[pixelTypeIndex].Clone());
+                    Vector2I newPos = new Vector2I(pos.X + x, pos.Y +  y);
+                    PixelElement pixel = _brushNode.pixels[pixelTypeIndex].Clone();
+                    pixel.SetRandomColor();
+                    SetPixelElementAt(newPos, pixel, true);
                 }
             }
         }
@@ -267,34 +269,33 @@ public partial class PixelWorld : Node2D
         {
             if (chunk == null) continue;
             chunk.UpdateLayers();
-            chunk.UpdateCollisions();
+            //chunk.UpdateCollisions();
         }
     }
     # endregion 
     
     # region PIXEL
     // this functions expects a coordinate in the world not in the viewport
-    public void SetPixelElementAt(Vector2I pos, PixelElement pixel)
+    public void SetPixelElementAt(Vector2I worldPos, PixelElement pixel, bool isActive)
     {
-        if ( !IsInBoundPixel(pos)) { return; }
+        if ( !IsInBoundPixel(worldPos)) { return; }
         
-        PixelChunk chunk = GetChunkFromPixelPos(pos);
+        PixelChunk chunk = GetChunkFromPixelPos(worldPos);
         if (chunk == null) return;
-
         SetChunkActive(chunk);
+        chunk.UpdatePixel(new Vector2I( worldPos.X % chunkSize.X, worldPos.Y % chunkSize.Y), pixel, isActive);
         
-        int x = chunk.worldPosition.X;
-        int y = chunk.worldPosition.Y;
 
         //int maxX = _chunks.GetLength(0);
         //int maxY = _chunks.GetLength(1);
 
-        chunk.ColorPixel(new Vector2I( pos.X % chunkSize.X, pos.Y % chunkSize.Y), pixel);
         
+        int x = chunk.worldPosition.X;
+        int y = chunk.worldPosition.Y;
         // Check above
         if (y - 1 >= 0 && _chunks[x, y - 1] != null)
         {
-            if (pos.Y % chunkSize.Y == 0 && y  > 0 && _chunks[x, y - 1] != null)
+            if (worldPos.Y % chunkSize.Y == 0 && y  > 0 && _chunks[x, y - 1] != null)
             {
                 _activeChunks.Add(_chunks[x, y - 1]);
             }
@@ -322,7 +323,7 @@ public partial class PixelWorld : Node2D
         {
             for (int y = 0; y < _worldSize.Y; y++)
             {
-                SetPixelElementAt(new Vector2I(x,y), PixelFactory.CreateAir());
+                SetPixelElementAt(new Vector2I(x,y), PixelFactory.CreateAir(), false);
                 //SetPixelElementAt(new Vector2I(x,y), PixelFactory.CreateSolid());
                 //if (y < WorldSize.Y / 2)
                 //{

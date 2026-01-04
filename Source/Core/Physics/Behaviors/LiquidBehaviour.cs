@@ -52,13 +52,13 @@ public class LiquidBehaviour : IPixelBehaviour
     /// Determines the next position for a liquid pixel based on physics rules and the pixel's statistics.
     /// Returns a tuple containing the current position and the next position.
     /// </summary>
-    /// <param name="origin">The current position of the pixel</param>
+    /// <param name="CurrentPositionInChunk">The current position of the pixel</param>
     /// <param name="chunk">The pixel chunk containing the pixel</param>
     /// <param name="pixel">The pixel element being processed</param>
     /// <returns>A tuple with (Current position, Next position)</returns>
     /// TODO: Water currently keeps chunks active, i should change it so it when a pixel has attempted about 10 positions it will stop looking or something like that
     /// active chunks cost compute power
-    public (Vector2I Current, Vector2I Next) GetSwapPosition(PixelWorld world, PixelChunk chunk, PixelElement pixel, Vector2I origin)
+    public (Vector2I Current, Vector2I Next) GetSwapPosition(PixelWorld world, PixelChunk chunk, PixelElement pixel, Vector2I CurrentPositionInChunk)
     {
         // If a pixel is falling, ensure vertical motion is allowed
         // This is the complement to the IsFalling/CancelHorizontalMotion relationship:
@@ -67,17 +67,17 @@ public class LiquidBehaviour : IPixelBehaviour
         //if (pixel.Physics.IsFalling) pixel.Physics = pixel.Physics with { CancelVerticalMotion = false };
 
         // If vertical motion is canceled, the pixel stays in place
-        if (pixel.Physics.CancelVerticalMotion) return (origin, origin);
+        if (pixel.Physics.CancelVerticalMotion) return (CurrentPositionInChunk, CurrentPositionInChunk);
 
         // activate side chunk if a side pixel is processed. 
         // this is done to fix the issue where settled water becomes a solid block
         Vector2I left = chunk.worldPosition + Vector2I.Left;
         Vector2I right = chunk.worldPosition + Vector2I.Right;
-        if (origin.X == 0)                   world.SetChunkActive(world.GetChunkAt(left));
-        if (origin.X == world.chunkSize.X-1) world.SetChunkActive(world.GetChunkAt(right));
+        if (CurrentPositionInChunk.X == 0)                   world.SetChunkActive(world.GetChunkAt(left));
+        if (CurrentPositionInChunk.X == world.chunkSize.X-1) world.SetChunkActive(world.GetChunkAt(right));
 
-        origin = chunk.ToWorldPosition(origin);
-        Vector2I nextPos = new Vector2I(origin.X, origin.Y + 1);
+        CurrentPositionInChunk = chunk.ToWorldPosition(CurrentPositionInChunk);
+        Vector2I nextPos = new Vector2I(CurrentPositionInChunk.X, CurrentPositionInChunk.Y + 1);
 
         // 1. Check if you can place a pixel directly below
         if (world.IsInBoundPixel(nextPos))
@@ -87,15 +87,15 @@ public class LiquidBehaviour : IPixelBehaviour
             {
                 // Calculate momentum as the pixel falls downward
                 pixel.Physics.ApplyMomentum(pixel);
-                return (origin, nextPos);
+                return (CurrentPositionInChunk, nextPos);
             }
         }
 
-        if (pixel.Physics.CancelVerticalMotion) return (origin, origin);
+        if (pixel.Physics.CancelVerticalMotion) return (CurrentPositionInChunk, CurrentPositionInChunk);
         
         // If can't move directly down, calculate how the liquid should flow laterally
         // Apply flow physics to the liquid (handles spread patterns and momentum)
-        pixel.Physics.ApplyFlow(world, chunk, pixel, origin);
+        pixel.Physics.ApplyFlow(world, chunk, pixel, CurrentPositionInChunk);
 
         // Check if the pixel should stop moving (based on physics thresholds like friction)
         // This simulates how real liquids can stop flowing in certain conditions
@@ -109,7 +109,7 @@ public class LiquidBehaviour : IPixelBehaviour
             //{
             //    world.SetPixelElementAt(newPos, pixel.Clone());
             //}
-            return (origin, origin);
+            return (CurrentPositionInChunk, CurrentPositionInChunk);
         }
 
         // Generate a list of possible horizontal offsets based on flow resistance
@@ -125,12 +125,12 @@ public class LiquidBehaviour : IPixelBehaviour
         Vector2I direction = doLeftFirst ? Vector2I.Left : Vector2I.Right;
         
         // Try to find a valid position in the first chosen direction
-        var (Current, Next) = pixel.FindNextPixelPosition(world, chunk, origin, coords, direction, 6);
+        var (Current, Next) = pixel.FindNextPixelPosition(world, chunk, CurrentPositionInChunk, coords, direction, 6);
         if (Current != Next) return (Current, Next); // Return immediately if a valid move is found
         
         // If first direction fails, try the opposite direction
         direction = !doLeftFirst ? Vector2I.Left : Vector2I.Right;
-        (Current, Next) = pixel.FindNextPixelPosition(world, chunk, origin, coords, direction, 6);
+        (Current, Next) = pixel.FindNextPixelPosition(world, chunk, CurrentPositionInChunk, coords, direction, 6);
         
         // Return final result - if no movement is possible, Current and Next will be the same
         return (Current, Next);
