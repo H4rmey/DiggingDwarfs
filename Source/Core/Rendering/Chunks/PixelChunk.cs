@@ -31,7 +31,7 @@ public partial class PixelChunk : Node2D
 
     private List<(Vector2I, Vector2I)> _swaps = new();
 
-    private const bool DEBUG_DRAW_BORDERS = false;
+    private const bool DEBUG_DRAW_BORDERS = true;
     private DebugImage debugBorders;
     
     private const bool DEBUG_DRAW_PIXELS = false;
@@ -99,30 +99,48 @@ public partial class PixelChunk : Node2D
         if (!_pixelDirtyRect.HasDirtyRect)
             return _swaps;
 
-        Rect2I rect = _pixelDirtyRect.DirtyRect.Grow(3);
+        Rect2I rect = _pixelDirtyRect.DirtyRect.Grow(5);
 
-        int startX = rect.Position.X;
-        int startY = rect.Position.Y;
-        int endX = rect.End.X;
-        int endY = rect.End.Y;
+        int startX = Mathf.Max(rect.Position.X, 0);
+        int startY = Mathf.Max(rect.Position.Y, 0);
+        int endX   = Mathf.Min(rect.End.X, _size.X);
+        int endY   = Mathf.Min(rect.End.Y, _size.Y);
 
         for (int y = startY; y < endY; y++)
         {
             for (int x = startX; x < endX; x++)
             {
-                if (!IsInBound(new Vector2I(x, y)))
-                {
-                    Vector2I worldPos = ToWorldPosition(new Vector2I(x, y));
-                    PixelChunk chunk = parentWorld.GetChunkFromPixelPos(worldPos);
-                    chunk?._pixelDirtyRect.AddChangedPosition(chunk.ToWorldPosition(worldPos));
-                    continue;
-                }
-                
                 PixelElement pixel = pixels[x, y];
                 if (pixel == null) 
                     continue;
 
                 Vector2I chunkPos = new Vector2I(x, y);
+
+                Vector2I w = ToWorldPosition(new Vector2I(chunkPos.X, chunkPos.Y));
+                if (x == 0)
+                {
+                    Vector2I t_w = w + new Vector2I(-1, 0);
+                    PixelChunk chunk = parentWorld.GetChunkFromPixelPos(t_w);
+                    chunk?._pixelDirtyRect.ChangedPositions.Add(parentWorld.WorldToChunk(t_w));
+                }
+                if (y == 0)
+                {
+                    Vector2I t_w = w + new Vector2I(0, -1);
+                    PixelChunk chunk = parentWorld.GetChunkFromPixelPos(t_w);
+                    chunk?._pixelDirtyRect.ChangedPositions.Add(parentWorld.WorldToChunk(t_w));
+                }
+                if (y == _size.Y-1)
+                {
+                    Vector2I t_w = w + new Vector2I(0, 1);
+                    PixelChunk chunk = parentWorld.GetChunkFromPixelPos(t_w);
+                    chunk?._pixelDirtyRect.ChangedPositions.Add(parentWorld.WorldToChunk(t_w));
+                }
+                if (x == _size.X-1)
+                {
+                    Vector2I t_w = w + new Vector2I(1, 0);
+                    PixelChunk chunk = parentWorld.GetChunkFromPixelPos(t_w);
+                    chunk?._pixelDirtyRect.ChangedPositions.Add(parentWorld.WorldToChunk(t_w));
+                }
 
                 (Vector2I current, Vector2I next) =
                     pixel.GetSwapPosition(parentWorld, this, chunkPos);
