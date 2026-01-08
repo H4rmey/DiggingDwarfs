@@ -31,8 +31,8 @@ public partial class PixelWorld : Node2D
     public override void _Ready()
     {
         base._Ready();
-        _chunkCount = new Vector2I(1, 1);
-        chunkSize = new Vector2I(16, 9);
+        _chunkCount = new Vector2I(5, 5);
+        chunkSize = new Vector2I(80, 45);
 
         //Position = new Vector2(0, -10);
         _windowSize   = GetViewport().GetVisibleRect().Size;
@@ -90,7 +90,7 @@ public partial class PixelWorld : Node2D
     public override void _PhysicsProcess(double delta)
     {
         base._PhysicsProcess(delta);
-        //RefreshFrame();
+        RefreshFrame();
     }
     
     # region SWAPS
@@ -104,7 +104,7 @@ public partial class PixelWorld : Node2D
         {
             if (chunk == null) continue;
             //List<(Vector2I, Vector2I)> swap = chunk.GetSwapPositionsAll();
-            List<(Vector2I, Vector2I)> swap = chunk.GetSwapPositionsAll();
+            List<(Vector2I, Vector2I)> swap = chunk.GetSwapPositionsDirtyRect();
             if (swap.Count == 0)
             {
                 chunksToRemove.Add(chunk);
@@ -158,8 +158,8 @@ public partial class PixelWorld : Node2D
         PixelElement currentPixel = GetPixelElementAt(current);
         PixelElement nextPixel    = GetPixelElementAt(next);
         
-        SetPixelElementAt(next, currentPixel, true);
-        SetPixelElementAt(current, nextPixel, true);
+        SetPixelElementAt(next, currentPixel);
+        SetPixelElementAt(current, nextPixel);
     }
     # endregion
 
@@ -205,7 +205,7 @@ public partial class PixelWorld : Node2D
                     
                     if (!IsInBoundPixel(p)) continue;
                     
-                    //SetPixelElementAt(p, PixelFactory.CreateAir(), false);
+                    SetPixelElementAt(p, PixelFactory.CreateAir());
                 }
             }
         }
@@ -232,7 +232,7 @@ public partial class PixelWorld : Node2D
                     Vector2I newPos = new Vector2I(pos.X + x, pos.Y +  y);
                     PixelElement pixel = _brushNode.pixels[pixelTypeIndex].Clone();
                     pixel.SetRandomColor();
-                    SetPixelElementAt(newPos, pixel, true);
+                    SetPixelElementAt(newPos, pixel);
                 }
             }
         }
@@ -276,14 +276,14 @@ public partial class PixelWorld : Node2D
     
     # region PIXEL
     // this functions expects a coordinate in the world not in the viewport
-    public void SetPixelElementAt(Vector2I worldPos, PixelElement pixel, bool isActive)
+    public void SetPixelElementAt(Vector2I worldPos, PixelElement pixel)
     {
         if ( !IsInBoundPixel(worldPos)) { return; }
         
         PixelChunk chunk = GetChunkFromPixelPos(worldPos);
         if (chunk == null) return;
         SetChunkActive(chunk);
-        chunk.UpdatePixel(new Vector2I( worldPos.X % chunkSize.X, worldPos.Y % chunkSize.Y), pixel, isActive);
+        chunk.UpdatePixel(new Vector2I( worldPos.X % chunkSize.X, worldPos.Y % chunkSize.Y), pixel);
         
 
         //int maxX = _chunks.GetLength(0);
@@ -323,7 +323,7 @@ public partial class PixelWorld : Node2D
         {
             for (int y = 0; y < _worldSize.Y; y++)
             {
-                SetPixelElementAt(new Vector2I(x,y), PixelFactory.CreateAir(), false);
+                SetPixelElementAt(new Vector2I(x,y), PixelFactory.CreateAir());
                 //SetPixelElementAt(new Vector2I(x,y), PixelFactory.CreateSolid());
                 //if (y < WorldSize.Y / 2)
                 //{
@@ -346,6 +346,8 @@ public partial class PixelWorld : Node2D
         UpdateActiveChunks();
         _swaps = GetSwapsFromChunks();
     }
+    
+    
     
     # region MISC
     

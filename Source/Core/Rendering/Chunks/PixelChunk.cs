@@ -53,8 +53,12 @@ public partial class PixelChunk : Node2D
         
         _layerManager.init(_size); 
         AddChild(_layerManager);
+        
         _collision.Position = new Vector2I(-_size.X / 2, -_size.Y / 2);
         AddChild(_collision);
+        
+        _pixelDirtyRect.Position = new Vector2I(-_size.X / 2, -_size.Y / 2);
+        AddChild(_pixelDirtyRect);
 
         if (DEBUG_DRAW_BORDERS)
         {
@@ -88,23 +92,44 @@ public partial class PixelChunk : Node2D
 
     public List<(Vector2I, Vector2I)> GetSwapPositionsDirtyRect()
     {
-        foreach (Vector2I position in _pixelDirtyRect.activePixelPositions.ToArray())
+        _swaps.Clear();
+
+        _pixelDirtyRect.RecalculateDirtyRect();
+
+        if (!_pixelDirtyRect.HasDirtyRect)
+            return _swaps;
+
+        Rect2I rect = _pixelDirtyRect.DirtyRect;
+
+        int startX = Mathf.Max(rect.Position.X, 0);
+        int startY = Mathf.Max(rect.Position.Y, 0);
+        int endX   = Mathf.Min(rect.End.X, _size.X);
+        int endY   = Mathf.Min(rect.End.Y, _size.Y);
+
+        for (int y = startY; y < endY; y++)
         {
-            int x = position.X;
-            int y = position.Y;
-            
-            PixelElement pixel = pixels[x, y];
-            
-            (Vector2I current, Vector2I next) = pixel.GetSwapPosition(parentWorld, this, pixel.chunkPosition);
-
-            if (current == next)
+            for (int x = startX; x < endX; x++)
             {
-                //_pixelDirtyRect.SetPixelInactive(current);
-                continue;
-            }
+                PixelElement pixel = pixels[x, y];
+                if (pixel == null) 
+                    continue;
 
-            _swaps.Add((current, next));
+                Vector2I chunkPos = new Vector2I(x, y);
+
+                (Vector2I current, Vector2I next) =
+                    pixel.GetSwapPosition(parentWorld, this, chunkPos);
+
+                if (current == next)
+                    continue;
+
+                _swaps.Add((current, next));
+            }
         }
+
+        //_pixelDirtyRect.Clear();
+        rect.Grow(2);
+        rect.Position = new Vector2I(rect.Position.X, rect.Position.Y-3);
+        rect.Size = new Vector2I(rect.Size.X, rect.Size.Y+3);
         
         return _swaps;
     }
@@ -156,19 +181,16 @@ public partial class PixelChunk : Node2D
         _layerManager.UpdateLayers();
     }
 
-    public void UpdatePixel(Vector2I positionInChunk, PixelElement pixel, bool isActive)
+    public void UpdatePixel(Vector2I positionInChunk, PixelElement pixel)
     {
-        if (!IsInBound(positionInChunk)) return;
-        
-        //pixel.SetRandomColor();
+        if (!IsInBound(positionInChunk))
+            return;
+
         pixels[positionInChunk.X, positionInChunk.Y] = pixel;
         _layerManager.ColorPixel(positionInChunk, pixel);
         pixel.SetPosition_Chunk(this, positionInChunk);
-        
-        if (isActive)
-            _pixelDirtyRect.SetPixelActive(positionInChunk);
-        else
-            _pixelDirtyRect.SetPixelInactive(positionInChunk);
+
+        _pixelDirtyRect.AddChangedPosition(positionInChunk);
     }
 
     public bool IsInBound(Vector2I positionInChunk)
@@ -188,7 +210,6 @@ public partial class PixelChunk : Node2D
             for (int y = 0; y < _size.Y; y++)
             {
                 pixels[x, y] = PixelFactory.CreateAir();
-                _pixelDirtyRect.SetPixelInactive(new Vector2I(x,y));
             }
         }
     }
