@@ -31,8 +31,8 @@ public partial class PixelWorld : Node2D
     public override void _Ready()
     {
         base._Ready();
-        _chunkCount = new Vector2I(5, 5);
-        chunkSize = new Vector2I(80, 45);
+        _chunkCount = new Vector2I(9, 9);
+        chunkSize = new Vector2I(32, 18);
 
         //Position = new Vector2(0, -10);
         _windowSize   = GetViewport().GetVisibleRect().Size;

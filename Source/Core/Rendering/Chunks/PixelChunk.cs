@@ -127,13 +127,11 @@ public partial class PixelChunk : Node2D
         }
 
         //_pixelDirtyRect.Clear();
-        rect.Grow(2);
-        rect.Position = new Vector2I(rect.Position.X, rect.Position.Y-3);
-        rect.Size = new Vector2I(rect.Size.X, rect.Size.Y+3);
+        //rect.Grow(5);
         
         return _swaps;
     }
-
+    
     public List<(Vector2I, Vector2I)> GetSwapPositionsAll()
     {
         Vector2I prevPosNext = new Vector2I(0, 0);
