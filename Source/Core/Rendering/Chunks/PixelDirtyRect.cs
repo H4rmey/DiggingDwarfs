@@ -110,12 +110,13 @@ public partial class PixelDirtyRect : Node2D
         if (!HasDirtyRect)
             return;
         
-        GD.Print(DirtyRect); 
-        
         DrawRect(
             new Rect2(DirtyRect.Position, DirtyRect.Size),
             new Color(0f, 0f, 1f, 0.3f),
             filled: true
         );
+        
+        // Clear after drawing to prevent artifacts when nothing is processed
+        HasDirtyRect = false;
     }
 }

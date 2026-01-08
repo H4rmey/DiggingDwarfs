@@ -31,7 +31,7 @@ public partial class PixelWorld : Node2D
     public override void _Ready()
     {
         base._Ready();
-        _chunkCount = new Vector2I(9, 9);
+        _chunkCount = new Vector2I(3, 3);
         chunkSize = new Vector2I(32, 18);
 
         //Position = new Vector2(0, -10);
@@ -289,17 +289,17 @@ public partial class PixelWorld : Node2D
         //int maxX = _chunks.GetLength(0);
         //int maxY = _chunks.GetLength(1);
 
-        
-        int x = chunk.worldPosition.X;
-        int y = chunk.worldPosition.Y;
-        // Check above
-        if (y - 1 >= 0 && _chunks[x, y - 1] != null)
-        {
-            if (worldPos.Y % chunkSize.Y == 0 && y  > 0 && _chunks[x, y - 1] != null)
-            {
-                _activeChunks.Add(_chunks[x, y - 1]);
-            }
-        }
+
+        //int x = worldPos.X;
+        //int y = worldPos.Y;
+        //// Check above
+        //if (y - 1 >= 0 && _chunks[x, y - 1] != null)
+        //{
+        //    if (worldPos.Y % chunkSize.Y == 0 && y  > 0 && _chunks[x, y - 1] != null)
+        //    {
+        //        _activeChunks.Add(_chunks[x, y - 1]);
+        //    }
+        //}
     }
 
     // this functions expects a coordinate in the world not in the viewport

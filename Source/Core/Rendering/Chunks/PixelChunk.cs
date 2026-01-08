@@ -99,17 +99,25 @@ public partial class PixelChunk : Node2D
         if (!_pixelDirtyRect.HasDirtyRect)
             return _swaps;
 
-        Rect2I rect = _pixelDirtyRect.DirtyRect;
+        Rect2I rect = _pixelDirtyRect.DirtyRect.Grow(3);
 
-        int startX = Mathf.Max(rect.Position.X, 0);
-        int startY = Mathf.Max(rect.Position.Y, 0);
-        int endX   = Mathf.Min(rect.End.X, _size.X);
-        int endY   = Mathf.Min(rect.End.Y, _size.Y);
+        int startX = rect.Position.X;
+        int startY = rect.Position.Y;
+        int endX = rect.End.X;
+        int endY = rect.End.Y;
 
         for (int y = startY; y < endY; y++)
         {
             for (int x = startX; x < endX; x++)
             {
+                if (!IsInBound(new Vector2I(x, y)))
+                {
+                    Vector2I worldPos = ToWorldPosition(new Vector2I(x, y));
+                    PixelChunk chunk = parentWorld.GetChunkFromPixelPos(worldPos);
+                    chunk?._pixelDirtyRect.AddChangedPosition(chunk.ToWorldPosition(worldPos));
+                    continue;
+                }
+                
                 PixelElement pixel = pixels[x, y];
                 if (pixel == null) 
                     continue;
