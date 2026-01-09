@@ -158,6 +158,21 @@ public partial class PixelWorld : Node2D
         PixelElement currentPixel = GetPixelElementAt(current);
         PixelElement nextPixel    = GetPixelElementAt(next);
         
+        // Get chunks for both positions
+        PixelChunk currentChunk = GetChunkFromPixelPos(current);
+        PixelChunk nextChunk = GetChunkFromPixelPos(next);
+        
+        // Only activate the chunks that are directly involved in the swap
+        if (currentChunk != null)
+        {
+            SetChunkActive(currentChunk);
+        }
+        
+        if (nextChunk != null && nextChunk != currentChunk)
+        {
+            SetChunkActive(nextChunk);
+        }
+        
         SetPixelElementAt(next, currentPixel);
         SetPixelElementAt(current, nextPixel);
     }

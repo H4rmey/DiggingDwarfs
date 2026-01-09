@@ -84,7 +84,7 @@ public partial class PixelDirtyRect : Node2D
             min,
             max - min + Vector2I.One
         );
-        DirtyRect = DirtyRect.Grow(5);
+        DirtyRect = DirtyRect.Grow(3);
 
         HasDirtyRect = true;
 
